@@ -716,7 +716,7 @@ class Ytmusic {
         }
 
     suspend fun checkForGithubReleaseUpdate() =
-        httpClient.get("https://api.github.com/repos/manik-dev/Spotify/releases/latest") {
+        httpClient.get("https://api.github.com/repos/manikkdebnath24-dot/Spotify-Nightly/releases/latest") {
             contentType(ContentType.Application.Json)
         }
 

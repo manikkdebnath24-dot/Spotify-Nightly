@@ -937,7 +937,7 @@ fun App(
                                 onClick = {
                                     shouldShowUpdateDialog = false
                                     viewModel.showedUpdateDialog = false
-                                    openUrl("https://spotify.org/download")
+                                    openUrl("https://github.com/manikkdebnath24-dot/Spotify-Nightly/releases/latest")
                                 },
                             ) {
                                 Text(

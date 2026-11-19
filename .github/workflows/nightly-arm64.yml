@@ -1,14 +1,14 @@
 name: Nightly arm64-v8a APK
 
-# Builds a signed, installable FOSS release APK for arm64-v8a on every push to main.
+# Builds a signed, installable FOSS release APK for arm64-v8a on every push to main and
+# publishes it as a GitHub release, which is what the app's own updater reads.
 #
-# Why this exists: android-release.yml needs the original project's secrets (keystore,
-# Sentry, Last.fm) and cannot run in this fork. This one needs none: the FOSS flavour
-# resolves without Sentry/Last.fm, and the APK is signed with a throwaway key generated
-# inside the run, so nothing secret lives in the repository.
+# Signing: one key for every build, kept in the Actions cache (not in the repository, not in
+# a secret) so a new APK installs over the previous one instead of demanding an uninstall.
+# The cache key is versioned: bump SIGNING_KEY_ID below to deliberately start a new key.
 #
-# The nightly package (com.manikdev.spotify.nightly) has no F-Droid metadata, so the
-# app's own unofficial-build check never gets an answer and never blocks it.
+# Version: bumped per run, because the in-app updater only offers a release whose dotted
+# version is higher than the installed one.
 
 on:
   push:
@@ -18,11 +18,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: nightly-apk-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  SIGNING_KEY_ID: nightly-signing-key-v1
 
 jobs:
   build:
@@ -39,18 +42,48 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Make the signing key for this run
+      - name: Restore the signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: .nightly-signing
+          key: ${{ env.SIGNING_KEY_ID }}-${{ github.run_number }}
+          restore-keys: ${{ env.SIGNING_KEY_ID }}-
+
+      - name: Make the signing key if this is the first build
         run: |
           set -euo pipefail
-          PASS="$(openssl rand -hex 16)"
-          echo "NIGHTLY_KEY_PASS=$PASS" >> "$GITHUB_ENV"
-          keytool -genkeypair \
-            -keystore spotify.jks \
-            -storetype PKCS12 \
-            -alias nightly \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$PASS" -keypass "$PASS" \
-            -dname "CN=Spotify Nightly, O=Nightly, C=IN"
+          mkdir -p .nightly-signing
+          if [ ! -f .nightly-signing/nightly.jks ]; then
+            echo "No key in the cache yet - making one. Every later build reuses it."
+            PASS="$(openssl rand -hex 16)"
+            keytool -genkeypair \
+              -keystore .nightly-signing/nightly.jks \
+              -storetype PKCS12 \
+              -alias nightly \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Spotify Nightly, O=Nightly, C=IN"
+            printf '%s' "$PASS" > .nightly-signing/pass
+          fi
+          cp .nightly-signing/nightly.jks spotify.jks
+          echo "NIGHTLY_KEY_PASS=$(cat .nightly-signing/pass)" >> "$GITHUB_ENV"
+
+      - name: Save the signing key for the next build
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .nightly-signing
+          key: ${{ env.SIGNING_KEY_ID }}-${{ github.run_number }}
+
+      - name: Set the nightly version
+        run: |
+          set -euo pipefail
+          NAME="2.23.${{ github.run_number }}"
+          CODE="$((150 + ${{ github.run_number }}))"
+          sed -i "s/^version-name = .*/version-name = \"$NAME\"/" gradle/libs.versions.toml
+          sed -i "s/^version-code = .*/version-code = \"$CODE\"/" gradle/libs.versions.toml
+          grep -E '^version-(name|code)' gradle/libs.versions.toml
+          echo "NIGHTLY_VERSION=$NAME" >> "$GITHUB_ENV"
 
       - name: Build and sign the release APK (FOSS)
         env:
@@ -59,10 +92,22 @@ jobs:
           KEY_PASSWORD: ${{ env.NIGHTLY_KEY_PASS }}
         run: ./build_and_sign_apk.sh --release --foss
 
-      - name: List what was built
+      - name: Show what was built
         run: ls -lh androidApp/build/outputs/apk/release/
 
-      - name: Upload arm64-v8a APK
+      - name: Publish the release the in-app updater reads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ASSET="androidApp/build/outputs/apk/release/Spotify-foss-arm64-v8a-release.apk"
+          gh release create "v$NIGHTLY_VERSION" \
+            "$ASSET#Spotify-Nightly-$NIGHTLY_VERSION-arm64-v8a.apk" \
+            --title "Spotify Nightly $NIGHTLY_VERSION" \
+            --notes "Nightly build from $(git rev-parse --short HEAD)." \
+            --latest
+
+      - name: Upload the APK as a build artifact too
         uses: actions/upload-artifact@v4
         with:
           name: spotify-nightly-arm64-v8a
