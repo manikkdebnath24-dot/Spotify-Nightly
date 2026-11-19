@@ -721,13 +721,13 @@ class Ytmusic {
         }
 
     suspend fun checkForFdroidUpdate() =
-        httpClient.get("https://f-droid.org/api/v1/packages/com.manikdev.spotify") {
+        httpClient.get("https://f-droid.org/api/v1/packages/com.manikdev.spotify.nightly") {
             contentType(ContentType.Application.Json)
         }
 
     suspend fun fdroidMetadata() =
         httpClient.get(
-            "https://raw.githubusercontent.com/f-droid/fdroiddata/master/metadata/com.manikdev.spotify.yml",
+            "https://raw.githubusercontent.com/f-droid/fdroiddata/master/metadata/com.manikdev.spotify.nightly.yml",
         )
 
     suspend fun playlist(playlistId: String) =

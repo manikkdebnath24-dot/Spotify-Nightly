@@ -15,8 +15,8 @@ object Config {
      */
     val OFFICIAL_PACKAGE_NAMES =
         setOf(
-            "com.manikdev.spotify",
-            "com.manikdev.spotify.dev",
+            "com.manikdev.spotify.nightly",
+            "com.manikdev.spotify.nightly.dev",
             "com.spotify.music",
         )
 

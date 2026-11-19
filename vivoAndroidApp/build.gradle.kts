@@ -23,7 +23,7 @@ plugins {
 val androidAppDir = rootProject.file("androidApp")
 
 android {
-    namespace = "com.manikdev.spotify"
+    namespace = "com.manikdev.spotify.nightly"
     compileSdk = 37
 
     defaultConfig {

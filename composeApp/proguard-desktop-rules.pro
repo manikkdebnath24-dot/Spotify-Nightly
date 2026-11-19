@@ -177,9 +177,9 @@
 
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
--keep class com.manikdev.spotify.data.model.** { *; }
--keep class com.manikdev.spotify.extension.AllExtKt { *; }
--keep class com.manikdev.spotify.extension.AllExtKt$* { *; }
+-keep class com.manikdev.spotify.nightly.data.model.** { *; }
+-keep class com.manikdev.spotify.nightly.extension.AllExtKt { *; }
+-keep class com.manikdev.spotify.nightly.extension.AllExtKt$* { *; }
 -keep class com.manikdev.kotlinytmusicscraper.extension.MapExtKt$* { *; }
 
 ## Removes all Logs as they cause perfomance issues in prod

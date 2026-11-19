@@ -17,7 +17,7 @@ import com.manikdev.data.db.datasource.LocalDataSource
 import com.manikdev.data.db.getDatabaseBuilder
 import com.manikdev.domain.manager.DataStoreManager
 import com.manikdev.kotlinytmusicscraper.YouTube
-import com.manikdev.spotify.Spotify
+import com.manikdev.spotify.nightly.Spotify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import org.koin.dsl.module

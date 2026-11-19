@@ -26,7 +26,7 @@ import com.manikdev.domain.utils.toSyncedLrcString
 import com.manikdev.domain.utils.toSyncedLyrics
 import com.manikdev.kotlinytmusicscraper.YouTube
 import com.maxrave.logger.Logger
-import com.manikdev.spotify.Spotify
+import com.manikdev.spotify.nightly.Spotify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow

@@ -57,7 +57,7 @@
         </intent>
     </queries>
     <queries>
-        <package android:name="com.manikdev.spotify" />
+        <package android:name="com.manikdev.spotify.nightly" />
     </queries>
     <queries>
         <intent>

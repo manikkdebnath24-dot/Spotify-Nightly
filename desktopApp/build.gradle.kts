@@ -130,7 +130,7 @@ tasks.named<hydraulic.conveyor.gradle.WriteConveyorConfigTask>("writeConveyorCon
             """
             |app.fsname = spotify
             |app.display-name = Spotify
-            |app.rdns-name = com.manikdev.spotify
+            |app.rdns-name = com.manikdev.spotify.nightly
             |
             |// Override the Gradle-detected classpath with the ProGuard'd
             |// jar directory. Conveyor expands a directory entry to every
@@ -147,7 +147,7 @@ tasks.named<hydraulic.conveyor.gradle.WriteConveyorConfigTask>("writeConveyorCon
 
 compose.desktop {
     application {
-        mainClass = "com.manikdev.spotify.MainKt"
+        mainClass = "com.manikdev.spotify.nightly.MainKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
         nativeDistributions {
@@ -195,7 +195,7 @@ compose.desktop {
                             <key>CFBundleTypeRole</key>
                             <string>Viewer</string>
                             <key>CFBundleURLName</key>
-                            <string>com.manikdev.spotify.deeplink</string>
+                            <string>com.manikdev.spotify.nightly.deeplink</string>
                             <key>CFBundleURLSchemes</key>
                             <array>
                                 <string>spotify</string>

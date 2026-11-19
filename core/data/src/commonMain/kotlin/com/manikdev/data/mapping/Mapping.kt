@@ -36,8 +36,8 @@ import com.manikdev.kotlinytmusicscraper.models.youtube.Transcript
 import com.manikdev.kotlinytmusicscraper.models.youtube.YouTubeInitialPage
 import com.manikdev.kotlinytmusicscraper.pages.CommentItem
 import com.manikdev.kotlinytmusicscraper.pages.CommentsPage
-import com.manikdev.spotify.model.response.spotify.CanvasResponse
-import com.manikdev.spotify.model.response.spotify.SpotifyLyricsResponse
+import com.manikdev.spotify.nightly.model.response.spotify.CanvasResponse
+import com.manikdev.spotify.nightly.model.response.spotify.SpotifyLyricsResponse
 import org.spotify.lyrics.models.response.LyricsResponse
 import org.spotify.lyrics.models.response.TranslatedLyricsResponse
 import org.spotify.lyrics.parser.parseRichSyncLyrics

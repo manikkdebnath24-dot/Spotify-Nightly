@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class UserAgentHandshakeTest {
     @Test
     fun upgradeRequestContainsExactlyOneApplicationUserAgent() {
-        val userAgent = "Spotify/2.1.0 (com.manikdev.spotify; Test OS 1)"
+        val userAgent = "Spotify/2.1.0 (com.manikdev.spotify.nightly; Test OS 1)"
         ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
             server.soTimeout = 10_000
             val client =

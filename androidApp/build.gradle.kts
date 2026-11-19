@@ -16,11 +16,11 @@ plugins {
 android {
     val abis = arrayOf("armeabi-v7a", "arm64-v8a", "x86_64")
 
-    namespace = "com.manikdev.spotify"
+    namespace = "com.manikdev.spotify.nightly"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.manikdev.spotify"
+        applicationId = "com.manikdev.spotify.nightly"
         minSdk = 26
         targetSdk = 36
         versionCode =

@@ -45,7 +45,7 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     android {
-        namespace = "com.manikdev.spotify.composeapp"
+        namespace = "com.manikdev.spotify.nightly.composeapp"
         compileSdk = 37
         minSdk = 26
         withJava()
@@ -833,7 +833,7 @@ val mpvSetupAll by tasks.registering {
 }
 
 buildkonfig {
-    packageName = "com.manikdev.spotify"
+    packageName = "com.manikdev.spotify.nightly"
     exposeObjectWithName = "BuildKonfig"
     defaultConfigs {
         val versionName =
