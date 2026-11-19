@@ -39,7 +39,17 @@ fun rememberBackdrop(color: Color): PlatformBackdrop =
         drawContent()
     }
 
-private var frameCounter = 0
+/**
+ * How many times each glass layer has been drawn.
+ *
+ * This was one global counter, which quietly stopped throttling the moment a second glass surface
+ * was on screen: four surfaces incremented it four times per frame, so "every fifth" arrived every
+ * one and a quarter frames and every surface recorded almost every frame. That is why turning
+ * liquid glass on made the lag so much worse than the single-surface case it was tuned for.
+ * A counter per layer counts that layer's own draws, which is what the cadence was always meant
+ * to mean.
+ */
+private val recordCounters = mutableMapOf<GraphicsLayer, Int>()
 
 fun Modifier.drawBackdropCustomShape(
     backdrop: PlatformBackdrop,
@@ -87,7 +97,9 @@ fun Modifier.drawBackdropCustomShape(
             // still a fresh enough sample behind a blurred surface, and it is the difference
             // between holding 120 and missing it on a mid-range panel.
             val every = if (PerformanceSettings.highPerformanceMode) 10 else 5
-            if (frameCounter++ % every == 0) {
+            val drawn = recordCounters[layer] ?: 0
+            recordCounters[layer] = drawn + 1
+            if (drawn % every == 0) {
                 layer.record { drawBackdrop() }
             }
         },

@@ -98,34 +98,40 @@ import kotlin.math.sin
 fun Modifier.shimmer(): Modifier =
     composed {
         val appColors = LocalAppColors.current
-        var size by remember {
-            mutableStateOf(IntSize.Zero)
-        }
         val transition = rememberInfiniteTransition(label = "Shimmer")
-        val startOffsetX by transition.animateFloat(
-            initialValue = -2 * size.width.toFloat(),
-            targetValue = 2 * size.width.toFloat(),
+        // A fraction of the element's width, not a pixel offset. The pixel version had to know the
+        // element's size, which it learned by writing state from onGloballyPositioned - so every
+        // placeholder recomposed on every frame of the sweep. A Home that is still loading has
+        // dozens of these on screen at once, and that recomposition storm is what made the loading
+        // skeleton itself stutter.
+        val sweep by transition.animateFloat(
+            initialValue = -1f,
+            targetValue = 1f,
             animationSpec =
                 infiniteRepeatable(
                     animation = tween(1000),
                 ),
             label = "Shimmer",
         )
-
-        background(
-            brush =
-                Brush.linearGradient(
-                    colors =
-                        listOf(
-                            appColors.shimmerBackground,
-                            appColors.shimmerLine,
-                            appColors.shimmerBackground,
-                        ),
-                    start = Offset(startOffsetX, 0f),
-                    end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat()),
-                ),
-        ).onGloballyPositioned {
-            size = it.size
+        // Read in the draw phase: the sweep invalidates the DRAW of this box and nothing else.
+        // The size comes from DrawScope, so no layout callback and no state write is needed, and
+        // the gradient is built per frame in the draw pass instead of per recomposition.
+        drawBehind {
+            val width = size.width
+            val offsetX = sweep * 2f * width
+            drawRect(
+                brush =
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                appColors.shimmerBackground,
+                                appColors.shimmerLine,
+                                appColors.shimmerBackground,
+                            ),
+                        start = Offset(offsetX, 0f),
+                        end = Offset(offsetX + width, size.height),
+                    ),
+            )
         }
     }
 
