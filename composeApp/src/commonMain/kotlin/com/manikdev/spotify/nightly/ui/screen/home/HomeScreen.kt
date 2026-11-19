@@ -274,6 +274,14 @@ private val homeMoods =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @ExperimentalFoundationApi
+/**
+ * The HTTP client kmpalette uses to fetch an image for its dominant colour.
+ *
+ * Lazily built once and reused: the previous code constructed an engine per composition, which on
+ * a cold start landed on the very frame that was already the most expensive one in the app.
+ */
+private val PaletteHttpClient: HttpClient by lazy { HttpClient(CIO) }
+
 @Composable
 fun HomeScreen(
     onScrolling: (onTop: Boolean) -> Unit = {},
@@ -404,7 +412,11 @@ fun HomeScreen(
     // leaving the tint as it was.
     val headerImage by viewModel.homeBackground.collectAsStateWithLifecycle()
     var headerImageFailed by remember(headerImage) { mutableStateOf(false) }
-    val networkLoader = rememberNetworkLoader(HttpClient(CIO))
+    // One palette client for the whole process. This built a fresh HttpClient every time Home was
+    // composed - every return to the tab, and once more right after a cold start - and that client
+    // downloads the hero artwork again just to read one colour out of it, on top of Coil decoding
+    // the same image for the header. Sharing it removes the per-composition setup cost.
+    val networkLoader = rememberNetworkLoader(PaletteHttpClient)
     val dominantColorState =
         rememberDominantColorState(
             defaultColor = backgroundColor,

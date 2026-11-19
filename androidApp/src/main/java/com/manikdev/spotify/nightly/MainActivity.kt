@@ -51,6 +51,7 @@ import com.manikdev.spotify.nightly.ui.component.UpdateHost
 import com.manikdev.spotify.nightly.viewModel.SharedViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.koin.core.context.loadKoinModules
@@ -157,7 +158,15 @@ class MainActivity : AppCompatActivity() {
         updateController = AndroidUpdateController(this, VersionManager.getVersionName())
         requestInstallPermission()
         updateController.start()
-        checkForUpdate()
+        // The legacy popup check hits the same GitHub release feed as the updater above. Firing both
+        // in onCreate put two network round trips and two possible dialogs on top of the first
+        // frame - the coldest, most expensive frame the app draws. The updater answers first; this
+        // one waits until the app has settled, and finds nothing new when the updater already
+        // showed its sheet.
+        lifecycleScope.launch {
+            delay(5_000)
+            checkForUpdate()
+        }
         if (viewModel.recreateActivity.value || viewModel.isServiceRunning) {
             viewModel.activityRecreateDone()
         } else {
