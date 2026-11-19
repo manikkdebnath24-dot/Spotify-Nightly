@@ -32,6 +32,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history and tags: the release notes are the commits since the last release,
+          # so the tag that marks it has to be in the clone.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -95,6 +100,26 @@ jobs:
       - name: Show what was built
         run: ls -lh androidApp/build/outputs/apk/release/
 
+      - name: Write the changelog
+        run: |
+          set -euo pipefail
+          PREV="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [ -n "$PREV" ]; then
+            RANGE="$PREV..HEAD"
+            echo "Changes since $PREV" > notes.md
+          else
+            RANGE="HEAD~1..HEAD"
+            echo "First nightly build" > notes.md
+          fi
+          echo "" >> notes.md
+          # "- " bullets, which the in-app sheet turns into its own bullet lines.
+          git log "$RANGE" --no-merges --pretty=format:"- %s" >> notes.md
+          echo "" >> notes.md
+          echo "" >> notes.md
+          echo "Install over the previous build; no uninstall needed." >> notes.md
+          echo "--- notes ---"
+          cat notes.md
+
       - name: Publish the release the in-app updater reads
         env:
           GH_TOKEN: ${{ github.token }}
@@ -104,7 +129,7 @@ jobs:
           gh release create "v$NIGHTLY_VERSION" \
             "$ASSET#Spotify-Nightly-$NIGHTLY_VERSION-arm64-v8a.apk" \
             --title "Spotify Nightly $NIGHTLY_VERSION" \
-            --notes "Nightly build from $(git rev-parse --short HEAD)." \
+            --notes-file notes.md \
             --latest
 
       - name: Upload the APK as a build artifact too

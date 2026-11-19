@@ -55,7 +55,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manikdev.spotify.nightly.update.UpdateHostController
@@ -70,12 +74,11 @@ import kotlin.math.sin
  * "Maybe later" never scroll away while the changelog is being read.
  */
 /**
- * Colours for the update sheet.
+ * Colours for the update sheet: Material blue, in both themes.
  *
- * In dark mode the sheet is deliberately a white card with blue accents — a brand surface that
- * stands apart from the dark app behind it. In light mode it stays in the theme's own container
- * colours, because a white card on a white app would have no edge at all; there the accent is
- * the theme's primary, so the sheet matches whatever palette the user picked.
+ * It used to follow the app's palette (white card with a blue accent in dark, theme primary in
+ * light), so the sheet changed colour with whatever theme the user had picked. It is blue now on
+ * purpose - the same blue in either theme - so the update surface is recognisably itself.
  */
 private data class UpdatePalette(
     val container: Color,
@@ -92,23 +95,25 @@ private fun updatePalette(): UpdatePalette {
     // luminance, not isSystemInDarkTheme(): the app has its own theme mode, and this follows it.
     val isDark = scheme.surface.luminance() < 0.5f
     return if (isDark) {
-        val blue = Color(0xFF2563EB)
+        // Material blue 200 on a deep blue surface: the accent stays legible on dark, and the
+        // sheet is still blue rather than a white card.
         UpdatePalette(
-            container = Color.White,
-            onContainer = Color(0xFF0F172A),
-            secondaryText = Color(0xFF475569),
-            accent = blue,
-            chipBackground = blue.copy(alpha = 0.12f),
-            chipText = blue,
+            container = Color(0xFF0E1B33),
+            onContainer = Color(0xFFE7EEFF),
+            secondaryText = Color(0xFFA9B8D6),
+            accent = Color(0xFF8AB4FF),
+            chipBackground = Color(0xFF1D2F55),
+            chipText = Color(0xFFC3D7FF),
         )
     } else {
+        // Material blue 700 on a blue-tinted surface, the same family as the dark sheet.
         UpdatePalette(
-            container = scheme.surfaceContainerHigh,
-            onContainer = scheme.onSurface,
-            secondaryText = scheme.onSurfaceVariant,
-            accent = scheme.primary,
-            chipBackground = scheme.primaryContainer,
-            chipText = scheme.onPrimaryContainer,
+            container = Color(0xFFEDF3FE),
+            onContainer = Color(0xFF0B1B34),
+            secondaryText = Color(0xFF41536F),
+            accent = Color(0xFF0B57D0),
+            chipBackground = Color(0xFFD6E3FF),
+            chipText = Color(0xFF0B3E96),
         )
     }
 }
@@ -235,41 +240,28 @@ private fun UpdateSheet(
                         fontWeight = FontWeight.Bold,
                         color = palette.onContainer,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = currentVersion,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = palette.secondaryText,
-                        )
-                        Text(
-                            text = "  →  ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = info.versionName,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = palette.accent,
-                        )
-                    }
-                }
-                // Dynamic-colour chip that marks the version as the latest one.
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = palette.chipBackground,
-                ) {
+                    // One Text, not three in a Row. Three separate Texts each wrapped on their
+                    // own when the space ran out, so "2.23.3 -> 2.23.4" broke across two lines and
+                    // the new version split down the middle ("2.2" over "3.4"). A single
+                    // AnnotatedString cannot break between the pieces: softWrap is off and it
+                    // ellipsises instead.
                     Text(
                         text =
-                            if (info.abiLabel.isNotBlank()) {
-                                "Recommended for you · ${info.abiLabel}"
-                            } else {
-                                "Recommended for you"
+                            buildAnnotatedString {
+                                withStyle(SpanStyle(color = palette.secondaryText)) {
+                                    append(currentVersion)
+                                }
+                                withStyle(SpanStyle(color = palette.secondaryText)) {
+                                    append("  \u2192  ")
+                                }
+                                withStyle(SpanStyle(color = palette.accent, fontWeight = FontWeight.SemiBold)) {
+                                    append(info.versionName)
+                                }
                             },
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = palette.chipText,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -282,6 +274,13 @@ private fun UpdateSheet(
                         .heightIn(max = if (expanded) halfScreen else 140.dp)
                         .verticalScroll(rememberScrollState()),
             ) {
+                if (info.notes.isEmpty()) {
+                    Text(
+                        text = "No changelog was attached to this release.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.secondaryText,
+                    )
+                }
                 info.notes.forEach { line ->
                     val isHeadline = !line.startsWith("•") && !line.startsWith("–") && !line.startsWith("-")
                     Text(
@@ -370,32 +369,64 @@ private fun UpdateSheet(
                                 )
                             }
                             }
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(10.dp))
+                            // One capsule, cut down the middle: the percentage is the left half and
+                            // the transfer numbers the right one, with a small gap where the cut is.
+                            // Both halves are centred under the bar rather than pushed to the edges.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
-                                    text = "${(current.progress * 100).toInt()}%",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = palette.onContainer,
-                                )
-                                Text(
-                                    text = buildString {
-                                        if (current.bytesPerSecond > 0) {
-                                            append(formatSpeed(current.bytesPerSecond))
-                                            append(" · ")
-                                        }
-                                        if (current.totalBytes > 0) {
-                                            append(formatBytes(current.bytesDownloaded))
-                                            append(" / ")
-                                            append(formatBytes(current.totalBytes))
-                                        }
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = palette.secondaryText,
-                                )
+                                Surface(
+                                    shape =
+                                        RoundedCornerShape(
+                                            topStart = 50.dp,
+                                            bottomStart = 50.dp,
+                                            topEnd = 0.dp,
+                                            bottomEnd = 0.dp,
+                                        ),
+                                    color = palette.chipBackground,
+                                ) {
+                                    Text(
+                                        text = "${(current.progress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = palette.chipText,
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(start = 14.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+                                    )
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                Surface(
+                                    shape =
+                                        RoundedCornerShape(
+                                            topStart = 0.dp,
+                                            bottomStart = 0.dp,
+                                            topEnd = 50.dp,
+                                            bottomEnd = 50.dp,
+                                        ),
+                                    color = palette.chipBackground,
+                                ) {
+                                    Text(
+                                        text =
+                                            buildString {
+                                                if (current.bytesPerSecond > 0) {
+                                                    append(formatSpeed(current.bytesPerSecond))
+                                                    append(" · ")
+                                                }
+                                                if (current.totalBytes > 0) {
+                                                    append(formatBytes(current.bytesDownloaded))
+                                                    append(" / ")
+                                                    append(formatBytes(current.totalBytes))
+                                                }
+                                            },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = palette.chipText,
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(start = 10.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+                                    )
+                                }
                             }
                         }
                     }
