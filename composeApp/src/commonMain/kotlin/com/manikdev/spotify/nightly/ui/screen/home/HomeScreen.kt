@@ -122,6 +122,7 @@ import com.manikdev.spotify.nightly.Platform
 import com.manikdev.spotify.nightly.expect.openUrl
 import com.manikdev.spotify.nightly.expect.ui.DesktopMiniPlayerClearance
 import com.manikdev.spotify.nightly.expect.ui.HorizontalScrollBar
+import com.manikdev.spotify.nightly.expect.ui.PerformanceSettings
 import com.manikdev.spotify.nightly.expect.ui.VerticalScrollBar
 import com.manikdev.spotify.nightly.expect.ui.layerBackdrop
 import com.manikdev.spotify.nightly.expect.ui.rememberBackdrop
@@ -309,6 +310,44 @@ fun HomeScreen(
                 }
             }
         }
+    // Stable, cheap keys for the feed. `item.hashCode()` hashed the whole shelf - every title, id and
+    // thumbnail of every row in it - once per item on every composition, and allocated a String for
+    // the result, so scrolling paid for it again and again. An index plus the title is stable for as
+    // long as the feed is (which is what a key has to be), and costs nothing to build.
+    val shelfKeys =
+        remember(homeShelves) {
+            homeShelves.mapIndexed { index, item -> "$index:${item.title}" }
+        }
+    val quickPicksTitle = stringResource(Res.string.quick_picks)
+    // Quick picks is the one shelf whose rows drop the last artist, and the copy that does it used to
+    // be built INSIDE the list item: a find over the whole feed plus a fresh copy of every row, on
+    // every composition of that item. The copy therefore changed identity each time, which
+    // recomposed QuickPicks and its grid for nothing. Built once per feed instead.
+    val quickPicksItem =
+        remember(homeData, quickPicksTitle) {
+            homeData.firstOrNull { it.title == quickPicksTitle }?.let { content ->
+                content.copy(
+                    contents =
+                        content.contents.mapNotNull { ct ->
+                            ct?.copy(
+                                artists =
+                                    ct.artists?.let { art ->
+                                        if (art.size > 1) {
+                                            art.dropLast(1)
+                                        } else {
+                                            art
+                                        }
+                                    },
+                            )
+                        },
+                )
+            }
+        }
+    // High performance mode is the app's "no glass" switch, and the scrolled top bar was the one
+    // blur that ignored it: it kept a live haze blur of the whole feed running on every frame while
+    // you scrolled. Off, the bar draws the style's own fallback - the opaque surface tint haze uses
+    // on a device it cannot blur on - so it looks the same, without the per-frame capture.
+    val blurEnabled = !PerformanceSettings.highPerformanceMode
     val newRelease by viewModel.newRelease.collectAsStateWithLifecycle()
     val chart by viewModel.chart.collectAsStateWithLifecycle()
     val moodMomentAndGenre by viewModel.exploreMoodItem.collectAsStateWithLifecycle()
@@ -785,7 +824,9 @@ fun HomeScreen(
                         modifier =
                             Modifier
                                 .then(if (LocalLiquidGlassEnabled.current) Modifier.layerBackdrop(chipBackdrop) else Modifier)
-                                .hazeSource(hazeState),
+                                // Only a blur consumer needs a source. With the bar's blur off there is
+                                // nothing to capture the feed for, and the capture is not free.
+                                .then(if (blurEnabled) Modifier.hazeSource(hazeState) else Modifier),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // Stable keys only. This used to append mainHomeThumbnail, which changes
@@ -793,7 +834,7 @@ fun HomeScreen(
                         // changed at once, LazyColumn threw away every item and rebuilt it, and
                         // the scroll stalled exactly where you saw it. A key must not depend on
                         // anything that changes while the list is on screen.
-                        itemsIndexed(homeShelves, key = { _, item -> item.hashCode().toString() }) { index, item ->
+                        itemsIndexed(homeShelves, key = { index, _ -> shelfKeys[index] }) { index, item ->
                             Box {
                                 if (index == 0) {
                                     Box(
@@ -882,45 +923,20 @@ fun HomeScreen(
                                     // Android drops the 8dp over each section's title: the list's own 8dp
                                     // spacing already separates it from the shelf above.
                                     if (getPlatform() != Platform.Android) Spacer(modifier = Modifier.height(8.dp))
-                                    if (item.title == stringResource(Res.string.quick_picks)) {
+                                    if (item.title == quickPicksTitle) {
                                         AnimatedVisibility(
-                                            visible =
-                                                homeData.find {
-                                                    it.title ==
-                                                        stringResource(
-                                                            Res.string.quick_picks,
-                                                        )
-                                                } != null,
+                                            visible = quickPicksItem != null,
                                         ) {
-                                            QuickPicks(
-                                                homeItem =
-                                                    (
-                                                        homeData.find {
-                                                            it.title ==
-                                                                stringResource(
-                                                                    Res.string.quick_picks,
-                                                                )
-                                                        } ?: return@AnimatedVisibility
-                                                    ).let { content ->
-                                                        content.copy(
-                                                            contents =
-                                                                content.contents.mapNotNull { ct ->
-                                                                    ct?.copy(
-                                                                        artists =
-                                                                            ct.artists?.let { art ->
-                                                                                if (art.size > 1) {
-                                                                                    art.dropLast(1)
-                                                                                } else {
-                                                                                    art
-                                                                                }
-                                                                            },
-                                                                    )
-                                                                },
-                                                        )
-                                                    },
-                                                navController = navController,
-                                                viewModel = viewModel,
-                                            )
+                                            // Already found and copied once per feed; the item just
+                                            // hands the same instance to QuickPicks every composition,
+                                            // so it no longer recomposes on its own.
+                                            quickPicksItem?.let { content ->
+                                                QuickPicks(
+                                                    homeItem = content,
+                                                    navController = navController,
+                                                    viewModel = viewModel,
+                                                )
+                                            }
                                         }
                                     } else if (item.isSongCardShelf()) {
                                         HomeDiscoverSection(
@@ -960,7 +976,7 @@ fun HomeScreen(
                             }
                         }
                         if (homeListState == ListState.PAGINATION_EXHAUST) {
-                            items(newRelease, key = { it.hashCode() }) {
+                            itemsIndexed(newRelease, key = { index, item -> "release:$index:${item.title}" }) { _, shelf ->
                                 AnimatedVisibility(
                                     visible = newRelease.isNotEmpty(),
                                 ) {
@@ -971,7 +987,7 @@ fun HomeScreen(
                                     ) {
                                         HomeItem(
                                             navController = navController,
-                                            data = it,
+                                            data = shelf,
                                         )
                                     }
                                 }
@@ -1089,9 +1105,13 @@ fun HomeScreen(
                         .then(
                             if (target) {
                                 Modifier.background(Color.Transparent)
-                            } else {
+                            } else if (blurEnabled) {
                                 Modifier
                                     .hazeBlur(HazeInput.Sources(hazeState), ultraThinBarStyle())
+                            } else {
+                                // Same colour haze falls back to when it cannot blur, so the bar looks
+                                // unchanged; only the blur work is gone.
+                                Modifier.background(MaterialTheme.colorScheme.surface)
                             },
                         ).onGloballyPositioned { coordinates ->
                             topAppBarHeightPx = coordinates.size.height
@@ -1459,17 +1479,17 @@ fun QuickPicks(
             state = lazyListState,
             flingBehavior = snapperFlingBehavior,
         ) {
-            items(homeItem.contents, key = { it.hashCode() }) {
-                if (it != null) {
+            itemsIndexed(homeItem.contents, key = { index, item -> item?.videoId ?: "null:$index" }) { _, row ->
+                if (row != null) {
                     QuickPicksItem(
                         onClick = {
-                            val firstQueue: Track = it.toTrack()
+                            val firstQueue: Track = row.toTrack()
                             viewModel.setQueueData(
                                 QueueData.Data(
                                     listTracks = arrayListOf(firstQueue),
                                     firstPlayedTrack = firstQueue,
-                                    playlistId = "RDAMVM${it.videoId}",
-                                    playlistName = "\"${it.title}\" Radio",
+                                    playlistId = "RDAMVM${row.videoId}",
+                                    playlistName = "\"${row.title}\" Radio",
                                     playlistType = PlaylistType.RADIO,
                                     continuation = null,
                                 ),
@@ -1480,10 +1500,10 @@ fun QuickPicks(
                             )
                         },
                         onLongClick = {
-                            track = it.toTrack()
+                            track = row.toTrack()
                             bottomSheetShow = true
                         },
-                        data = it,
+                        data = row,
                         widthDp = if (isPortrait) widthDp else minOf(widthDp, LandscapeGridItemMaxWidth + 30.dp),
                     )
                 }
