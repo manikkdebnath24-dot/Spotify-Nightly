@@ -405,16 +405,25 @@ class MainActivity : AppCompatActivity() {
     private fun applyHighPerformanceMode(enabled: Boolean) {
         // The renderer reads this to drop its most expensive passes.
         com.manikdev.spotify.nightly.expect.ui.PerformanceSettings.highPerformanceMode = enabled
+        // Switching high performance mode OFF used to reset the display mode to the system default
+        // right here, which undid enableHighRefreshRate() a few lines above: the panel dropped back
+        // to its default mode (60Hz on a 120Hz phone) and every scroll ran at half the display's
+        // rate, with nothing in the code looking wrong. The switch drops expensive render passes;
+        // it is not supposed to give up the panel's refresh rate.
+        if (!enabled) {
+            Logger.w("MainActivity", "high performance mode: false")
+            return
+        }
         runCatching {
             @Suppress("DEPRECATION")
             val current = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
             val best = current?.supportedModes?.maxByOrNull { it.refreshRate } ?: return
             window.attributes =
                 window.attributes.apply {
-                    preferredDisplayModeId = if (enabled) best.modeId else 0
-                    preferredRefreshRate = if (enabled) best.refreshRate else 0f
+                    preferredDisplayModeId = best.modeId
+                    preferredRefreshRate = best.refreshRate
                 }
-            Logger.w("MainActivity", "high performance mode: $enabled (${best.refreshRate}Hz)")
+            Logger.w("MainActivity", "high performance mode: true (${best.refreshRate}Hz)")
         }.onFailure { Logger.w("MainActivity", "high performance mode: ${it.message}") }
     }
 

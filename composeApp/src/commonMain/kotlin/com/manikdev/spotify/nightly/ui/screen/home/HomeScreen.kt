@@ -344,11 +344,12 @@ fun HomeScreen(
                 )
             }
         }
-    // High performance mode is the app's "no glass" switch, and the scrolled top bar was the one
-    // blur that ignored it: it kept a live haze blur of the whole feed running on every frame while
-    // you scrolled. Off, the bar draws the style's own fallback - the opaque surface tint haze uses
-    // on a device it cannot blur on - so it looks the same, without the per-frame capture.
-    val blurEnabled = !PerformanceSettings.highPerformanceMode
+    // The scrolled top bar blurs the feed under it, which is a per-frame capture of the whole list -
+    // the most expensive thing on this screen while a finger is moving. It is dropped in two cases:
+    // high performance mode, and an active scroll/fling. At rest the bar is exactly as it was; while
+    // the page is moving it draws the style's own fallback, the opaque surface tint haze uses on a
+    // device it cannot blur on, so the change reads as the bar settling rather than a different bar.
+    val blurEnabled = !PerformanceSettings.highPerformanceMode && !scrollState.isScrollInProgress
     val newRelease by viewModel.newRelease.collectAsStateWithLifecycle()
     val chart by viewModel.chart.collectAsStateWithLifecycle()
     val moodMomentAndGenre by viewModel.exploreMoodItem.collectAsStateWithLifecycle()
