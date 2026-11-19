@@ -272,8 +272,6 @@ private val homeMoods =
         Res.string.focus to HOME_PARAMS_FOCUS,
     )
 
-@OptIn(ExperimentalMaterial3Api::class)
-@ExperimentalFoundationApi
 /**
  * The HTTP client kmpalette uses to fetch an image for its dominant colour.
  *
@@ -282,6 +280,8 @@ private val homeMoods =
  */
 private val PaletteHttpClient: HttpClient by lazy { HttpClient(CIO) }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@ExperimentalFoundationApi
 @Composable
 fun HomeScreen(
     onScrolling: (onTop: Boolean) -> Unit = {},
