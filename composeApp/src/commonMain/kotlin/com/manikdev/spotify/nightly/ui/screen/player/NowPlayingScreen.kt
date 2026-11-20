@@ -134,9 +134,6 @@ private const val TAG = "NowPlayingScreen"
 private const val FULLSCREEN_LYRICS_ENTER_MS = 300
 private const val FULLSCREEN_LYRICS_EXIT_MS = 220
 
-@OptIn(ExperimentalFoundationApi::class)
-@ExperimentalMaterial3Api
-@Composable
 /**
  * The stiffness the player slides on, in both directions.
  *
@@ -147,6 +144,9 @@ private const val FULLSCREEN_LYRICS_EXIT_MS = 220
  */
 private const val PlayerSlideStiffness = 195f
 
+@OptIn(ExperimentalFoundationApi::class)
+@ExperimentalMaterial3Api
+@Composable
 fun NowPlayingScreen(
     sharedViewModel: SharedViewModel = koinInject(),
     navController: NavController,
