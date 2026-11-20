@@ -56,10 +56,14 @@ class PlayerSheetMotion(
     fun open(velocity: Float = 0f) {
         settle?.cancel()
         closing = false
-        val from = positionPx()
+        // Start CLOSED. `held` is NaN while the player stands open, and positionPx() answers 0 for
+        // that - so this used to slide from 0 to 0 and the player simply appeared, which is exactly
+        // what the recording shows: no motion at all on open, every time.
+        val travel = travelPx()
+        held = travel
         settle =
             scope.launch {
-                slide(from = from, to = 0f, velocity = velocity)
+                slide(from = travel, to = 0f, velocity = velocity)
                 held = Float.NaN
             }
     }
