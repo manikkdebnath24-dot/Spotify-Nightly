@@ -137,6 +137,16 @@ private const val FULLSCREEN_LYRICS_EXIT_MS = 220
 @OptIn(ExperimentalFoundationApi::class)
 @ExperimentalMaterial3Api
 @Composable
+/**
+ * The stiffness the player slides on, in both directions.
+ *
+ * BitChord's number (PlayerSheetMotion.SLIDE_STIFFNESS): critically damped, roughly 0.45s of
+ * response. A spring has no fast end - it leaves briskly and then settles slower and slower into
+ * place - which is where the eye follows the artwork home. Ported rather than approximated so the
+ * open and the close are the same motion, played in opposite directions.
+ */
+private const val PlayerSlideStiffness = 195f
+
 fun NowPlayingScreen(
     sharedViewModel: SharedViewModel = koinInject(),
     navController: NavController,
@@ -170,10 +180,14 @@ fun NowPlayingScreen(
             // the two animations never overlap and there is nothing to glitch.
             settle.animateTo(
                 targetValue = 0f,
+                // The same spring as the open, run backwards. BitChord's PlayerSheetMotion slides
+                // the player on ONE curve in both directions (SLIDE_STIFFNESS, critically damped),
+                // so closing is the open played in reverse rather than a different, quicker
+                // gesture - which is what made the old 320f close read as a separate motion.
                 animationSpec =
                     spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = 320f,
+                        stiffness = PlayerSlideStiffness,
                     ),
             )
             sheetState.hide()
@@ -206,7 +220,7 @@ fun NowPlayingScreen(
                 animationSpec =
                     spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = 195f,
+                        stiffness = PlayerSlideStiffness,
                     ),
             )
         }
