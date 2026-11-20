@@ -308,13 +308,18 @@ fun HomeScreen(
     // Any shelf YouTube heads with the listener's own avatar over its title (Listen again is one of
     // several). Home's header already shows the avatar, so those shelves drop it and keep their name
     // and title. Matched on the name rather than on any shelf title, the way the old Welcome back row did.
+    // The "Music video" shelf is dropped from the feed entirely. It is the one shelf whose cards
+    // are 16:9 videos rather than songs, and it sat right where the page felt worst to scroll.
+    // Matched on its title, the way the account-name shelves are matched above.
+    val musicVideoTitle = stringResource(Res.string.music_video)
     val homeShelves =
-        remember(homeData, accountInfo) {
+        remember(homeData, accountInfo, musicVideoTitle) {
             val accountName = accountInfo?.first
+            val shelves = homeData.filter { !it.title.equals(musicVideoTitle, ignoreCase = true) }
             if (accountName.isNullOrBlank()) {
-                homeData
+                shelves
             } else {
-                homeData.map {
+                shelves.map {
                     if (it.subtitle.equals(accountName, ignoreCase = true)) it.copy(thumbnail = null) else it
                 }
             }
