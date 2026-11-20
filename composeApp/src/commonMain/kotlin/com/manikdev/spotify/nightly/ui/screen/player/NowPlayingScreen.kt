@@ -46,15 +46,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -91,9 +83,6 @@ import com.manikdev.spotify.nightly.extension.hsvToColor
 import com.manikdev.spotify.nightly.extension.parseTimestampToMilliseconds
 import com.manikdev.spotify.nightly.extension.rememberIsInPipMode
 import com.manikdev.spotify.nightly.getPlatform
-import com.manikdev.spotify.nightly.ui.player.AppPlayerDock
-import com.manikdev.spotify.nightly.ui.player.PlayerSheetMotion
-import com.manikdev.spotify.nightly.ui.player.PlayerFlight
 import com.manikdev.spotify.nightly.ui.component.AddLyricsSheet
 import com.manikdev.spotify.nightly.ui.component.AddToPlaylistModalBottomSheet
 import com.manikdev.spotify.nightly.ui.component.FullscreenLyricsContent
@@ -145,16 +134,6 @@ private const val TAG = "NowPlayingScreen"
 private const val FULLSCREEN_LYRICS_ENTER_MS = 300
 private const val FULLSCREEN_LYRICS_EXIT_MS = 220
 
-/**
- * The stiffness the player slides on, in both directions.
- *
- * BitChord's number (PlayerSheetMotion.SLIDE_STIFFNESS): critically damped, roughly 0.45s of
- * response. A spring has no fast end - it leaves briskly and then settles slower and slower into
- * place - which is where the eye follows the artwork home. Ported rather than approximated so the
- * open and the close are the same motion, played in opposite directions.
- */
-private const val PlayerSlideStiffness = 195f
-
 @OptIn(ExperimentalFoundationApi::class)
 @ExperimentalMaterial3Api
 @Composable
@@ -163,124 +142,104 @@ fun NowPlayingScreen(
     navController: NavController,
     onDismiss: () -> Unit = {},
 ) {
-    val scope = rememberCoroutineScope()
-    // The cover in flight needs the artwork the mini player is showing, so it can hand it over.
-    val flyingTrack by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
-
-    // BitChord's shape, ported: there is no Material sheet here at all.
-    //
-    // A ModalBottomSheet slides itself up on its own curve while this content also moved, so the
-    // two motions fought and the player never looked like it was leaving the mini player. BitChord
-    // avoids that by opening the sheet once and keeping it open, then placing the content itself -
-    // PlayerSheetMotion holds one value for "how far below open the player is" and everything rides
-    // it. This is the same idea with the sheet replaced by a plain full-screen overlay: `settle` is
-    // that one value (0 at the mini player, 1 open), a finger adds `drag`, and nothing else moves.
-    // BitChord's motion, ported: `held` is how far below fully open the player is, in pixels, and
-    // every visual reads it. A tap springs it, a finger drags it, a flick carries its own speed in.
-    // Seeded from the window, not left at zero until the content has been laid out. It used to
-    // start at 0, and `motion.open()` ran in the same frame - so the travel distance was zero when
-    // the slide began, progress was 1 immediately, and the player appeared with no motion at all.
-    // That is why the animation looked like it had never been added.
-    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
-    var pageHeightPx by remember {
-        mutableFloatStateOf(windowInfo.containerSize.height.toFloat().takeIf { it > 0f } ?: 1f)
-    }
-    // One distance for both the motion and the dock, so `openFraction()` and the spring can never
-    // disagree about how far the player has come.
-    val travelPx = (pageHeightPx * 0.85f).coerceAtLeast(1f)
-    val motion =
-        remember(scope) {
-            PlayerSheetMotion(
-                scope = scope,
-                travelPx = { travelPx },
-                onClosed = onDismiss,
-            )
+    val coroutineScope = rememberCoroutineScope()
+    val sheetState =
+        rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+        )
+    // One value drives the player's arrival and its departure, so open and close are the same
+    // motion played in opposite directions - BitChord's PlayerSheetMotion does the same thing by
+    // holding its sheet open and moving the content itself.
+    val settle = remember { Animatable(0f) }
+    // Finger-following, the way BitChord's sheet does it: the sheet's own offset is read while it
+    // is being dragged, and the content's scale and fade ride that same number. So pulling down
+    // shrinks the player towards the mini bar under your finger instead of the content sitting
+    // still while the sheet slides out from under it.
+    val dragProgress by remember(sheetState) {
+        androidx.compose.runtime.derivedStateOf {
+            runCatching {
+                (sheetState.requireOffset() / 420f).coerceIn(0f, 1f)
+            }.getOrDefault(0f)
         }
-    var contentReady by remember { mutableStateOf(false) }
-    // derivedStateOf, so the player is told "expanded" once rather than on every frame.
-    val expanded by remember { androidx.compose.runtime.derivedStateOf { motion.progress() > 0.9f } }
-
-    // Hand the dock the two numbers BitChord's PlayerDock reads: where the player stands, and how
-    // far it has to travel. Set here because this overlay owns the sheet, as their host does.
-    LaunchedEffect(motion, travelPx) {
-        AppPlayerDock.sheetTravel = travelPx
-        AppPlayerDock.sheetOffset = { motion.positionPx() }
     }
 
-    LaunchedEffect(Unit) {
-        // One frame so the overlay is on screen before the most expensive composition in the app
-        // runs, then BitChord's slide - the same order that made the tap feel instant.
-        androidx.compose.runtime.withFrameNanos { }
-        contentReady = true
-        motion.open()
+    val hideSheet: () -> Unit = {
+        coroutineScope.launch {
+            // Out on a stiffer spring than in: closing should feel like leaving, not like the
+            // same journey backwards. Only after it has settled does M3 take the sheet away, so
+            // the two animations never overlap and there is nothing to glitch.
+            settle.animateTo(
+                targetValue = 0f,
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = 320f,
+                    ),
+            )
+            sheetState.hide()
+            onDismiss()
+        }
     }
 
-    Box(
+    ModalBottomSheet(
         modifier =
             Modifier
-                .fillMaxSize()
-                // The page behind dims as the player arrives, and lifts as it leaves.
-                // Drawn, not composed: reading the motion in composition here would recompose the
-                // whole player on every frame of the slide.
-                .drawBehind { drawRect(Color.Black.copy(alpha = 0.55f * motion.progress())) },
+                .fillMaxHeight(),
+        onDismissRequest = {
+            onDismiss()
+        },
+        containerColor = Color.Black,
+        dragHandle = {},
+        scrimColor = Color.Black.copy(alpha = .5f),
+        sheetState = sheetState,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        shape = RectangleShape,
     ) {
-        if (contentReady) {
-            Box(
+        // BitChord's motion, applied to the part we own without tearing out M3's sheet: the
+        // content arrives on a critically damped spring (stiffness 195, no bounce) instead of a
+        // timed ease, so it leaves briskly and then settles rather than stopping dead. Scale,
+        // alpha and lift all ride the same value, which is what keeps it from looking like three
+        // separate animations.
+        LaunchedEffect(Unit) {
+            settle.animateTo(
+                targetValue = 1f,
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = 195f,
+                    ),
+            )
+        }
+        androidx.compose.foundation.layout.Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+        ) {
+            androidx.compose.foundation.layout.Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .onSizeChanged { pageHeightPx = it.height.toFloat() }
                         .graphicsLayer {
-                            val t = motion.progress()
-                            // No fade on the player itself. The recording showed the content
-                            // arriving at its resting place already, only translucent - a fade
-                            // standing in for a slide, because alpha was doing the visible work
-                            // while the translation was barely there. BitChord fades only the
-                            // page behind; the player travels.
-                            alpha = 1f
-                            // From the mini player's own cover, not a fixed lift.
-                            // Exactly where the motion says the player stands.
-                            translationY = motion.positionPx()
-                            // Grows out of the bar rather than sliding up from nowhere.
-                            val grow = 0.92f + 0.08f * t
-                            scaleX = grow
-                            scaleY = grow
+                            val t = settle.value * (1f - dragProgress)
+                            alpha = t
+                            // No scale here, on purpose. A graphicsLayer that scales the whole
+                            // player makes Compose rasterise the layer and then stretch it, and
+                            // the artwork comes out soft - which is exactly the quality loss this
+                            // caused. Translation and alpha cost no pixels, so the cover stays
+                            // sharp at every frame of the motion.
+                            translationY = (1f - t) * 120.dp.toPx()
                         },
             ) {
                 NowPlayingScreenContent(
                     sharedViewModel = sharedViewModel,
                     navController = navController,
-                    isExpanded = expanded,
+                    isExpanded = sheetState.currentValue == SheetValue.Expanded,
                     dismissIcon = SpotifyIcons.KeyboardArrowDown,
-                    onDismiss = { motion.close() },
+                    onDismiss = {
+                        hideSheet()
+                    },
                 )
             }
-            // Above the player, drawn last: the cover leaving the mini player and landing on the
-            // player's own cover.
-            PlayerFlight(
-                progress = { motion.progress() },
-                artwork = flyingTrack?.songEntity?.thumbnails,
-            )
-            // Pull down anywhere on the top strip to send it back, following the finger.
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(72.dp)
-                        .pointerInput(Unit) {
-                            var velocity = 0f
-                            detectVerticalDragGestures(
-                                onDragStart = { velocity = 0f },
-                                onDragEnd = { motion.release(velocity) },
-                                onDragCancel = { motion.release(0f) },
-                            ) { change, dy ->
-                                velocity = dy * 60f
-                                motion.drag(dy)
-                                change.consume()
-                            }
-                        },
-            )
         }
     }
 }

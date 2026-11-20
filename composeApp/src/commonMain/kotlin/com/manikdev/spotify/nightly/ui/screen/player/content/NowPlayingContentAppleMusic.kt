@@ -50,8 +50,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.manikdev.spotify.nightly.ui.player.reportPlayerCover
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -978,13 +976,7 @@ private fun AppleMusicArtworkPage(
                         .align(Alignment.TopCenter)
                         .padding(top = topInset)
                         .fillMaxWidth()
-                        .height(artworkHeight)
-                        // POSITION ONLY. The cover in flight needs to know where the player's own
-                        // artwork rests so it can land on it instead of on an estimate. This adds
-                        // a bounds report and nothing else: no URL, no size hint, no cache key and
-                        // no decode change - the artwork path the thumbnail lock protects is
-                        // untouched.
-                        .onGloballyPositioned { reportPlayerCover(it.boundsInWindow()) },
+                        .height(artworkHeight),
             ) {
                 AsyncImage(
                     model = coverRequest,

@@ -77,8 +77,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -120,7 +118,6 @@ import com.manikdev.spotify.nightly.extension.LeftToRight
 import com.manikdev.spotify.nightly.extension.elapsedLabel
 import com.manikdev.spotify.nightly.extension.formatDuration
 import com.manikdev.spotify.nightly.getPlatform
-import com.manikdev.spotify.nightly.ui.player.AppPlayerDock
 import com.manikdev.spotify.nightly.ui.component.ExplicitBadge
 import com.manikdev.spotify.nightly.ui.component.HeartCheckBox
 import com.manikdev.spotify.nightly.ui.component.PlayPauseButton
@@ -753,9 +750,7 @@ fun MiniPlayer(
                                 Modifier
                                     .size(32.dp)
                                     .clip(ArtworkShape)
-                                    .hoverable(artworkInteraction)
-                                    // The player flies from here. BitChord's dock, one report.
-                                    .onGloballyPositioned { AppPlayerDock.reportMiniArt(it, 6.dp) },
+                                    .hoverable(artworkInteraction),
                             contentAlignment = Alignment.Center,
                         ) {
                             AsyncImage(
