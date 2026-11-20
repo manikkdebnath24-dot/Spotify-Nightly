@@ -83,6 +83,7 @@ import com.manikdev.spotify.nightly.extension.hsvToColor
 import com.manikdev.spotify.nightly.extension.parseTimestampToMilliseconds
 import com.manikdev.spotify.nightly.extension.rememberIsInPipMode
 import com.manikdev.spotify.nightly.getPlatform
+import com.manikdev.spotify.nightly.ui.player.PlayerDock
 import com.manikdev.spotify.nightly.ui.component.AddLyricsSheet
 import com.manikdev.spotify.nightly.ui.component.AddToPlaylistModalBottomSheet
 import com.manikdev.spotify.nightly.ui.component.FullscreenLyricsContent
@@ -241,7 +242,10 @@ fun NowPlayingScreen(
                             // the artwork comes out soft - which is exactly the quality loss this
                             // caused. Translation and alpha cost no pixels, so the cover stays
                             // sharp at every frame of the motion.
-                            translationY = (1f - t) * 120.dp.toPx()
+                            // From the mini player's own cover, not a fixed 120dp: the player
+                            // rises out of the bar it was tapped on. PlayerDock measures the
+                            // cover; the destination is an estimate of where the artwork rests.
+                            translationY = (1f - t) * PlayerDock.startTravelPx(size.height)
                         },
             ) {
                 // The player is the most expensive composition in the app - artwork, palette,
