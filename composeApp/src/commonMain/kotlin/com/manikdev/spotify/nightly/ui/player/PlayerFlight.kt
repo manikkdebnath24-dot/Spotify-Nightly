@@ -11,18 +11,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import coil3.compose.LocalPlatformContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlin.math.roundToInt
@@ -30,19 +29,14 @@ import kotlin.math.roundToInt
 /**
  * The artwork in flight between the mini player and the full-screen player.
  *
- * This is the half of BitChord's dock that a translation cannot do: the content can slide, but only
- * a cover drawn at the interpolated rectangle appears to *grow out of* the mini player and land on
- * the player's own cover. [progress] is the same value the sheet moves on - 0 at the mini player,
- * 1 at the player - so the flight cannot drift out of step with the sheet.
- *
- * The destination is the player's cover when a style reports it ([PlayerDock.playerArtBounds]);
- * otherwise it is estimated as a centred square in the upper part of the page. The flight fades out
- * over the last tenth, so even an estimated landing cannot show an edge: by the time it is
- * transparent, the real artwork is what you are looking at.
+ * [progress] is a lambda on purpose. It used to be a Float, read in composition, so every frame of
+ * the slide recomposed this file and rebuilt its ImageRequest - the animation was paying for a
+ * recomposition per frame, which is exactly the lag that got worse the moment the slide was added.
+ * As a lambda it is read in the draw phase: the flight costs a draw, nothing more.
  */
 @Composable
 fun PlayerFlight(
-    progress: Float,
+    progress: () -> Float,
     artwork: Any?,
     modifier: Modifier = Modifier,
 ) {
@@ -53,29 +47,33 @@ fun PlayerFlight(
         return
     }
     val end = PlayerDock.playerArtBounds ?: estimatedArtRect(page)
-    val t = progress.coerceIn(0f, 1f)
-    if (t >= 0.999f) return
+    if (end.width <= 0f || end.height <= 0f) return
 
-    val rect =
-        Rect(
-            left = lerp(start.left, end.left, t),
-            top = lerp(start.top, end.top, t),
-            right = lerp(start.right, end.right, t),
-            bottom = lerp(start.bottom, end.bottom, t),
-        )
     val density = LocalDensity.current
-    val widthDp = with(density) { (rect.right - rect.left).toDp() }
-    val heightDp = with(density) { (rect.bottom - rect.top).toDp() }
-    val corner = lerp(6f, 16f, t).dp
+    val widthDp = with(density) { end.width.toDp() }
+    val heightDp = with(density) { end.height.toDp() }
 
     Box(
         modifier =
             modifier
-                .offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
+                // Laid out once at the destination, then moved and scaled in the draw phase.
+                .offset { IntOffset(end.left.roundToInt(), end.top.roundToInt()) }
                 .size(width = widthDp, height = heightDp)
-                .clip(RoundedCornerShape(corner))
-                // Gone before the sheet has finished, so its landing never has to be exact.
-                .alpha(((1f - t) / 0.1f).coerceIn(0f, 1f)),
+                // A fixed corner: an animated one would have to be read in composition, which is
+                // the recomposition-per-frame this file exists to avoid.
+                .clip(RoundedCornerShape(12.dp))
+                .graphicsLayer {
+                    val t = progress().coerceIn(0f, 1f)
+                    // From the mini cover's own rectangle to the player's, in one transform.
+                    val scaleXStart = start.width / end.width
+                    val scaleYStart = start.height / end.height
+                    scaleX = scaleXStart + (1f - scaleXStart) * t
+                    scaleY = scaleYStart + (1f - scaleYStart) * t
+                    translationX = (start.center.x - end.center.x) * (1f - t)
+                    translationY = (start.center.y - end.center.y) * (1f - t)
+                    // Gone before the sheet has finished, so an estimated landing cannot show.
+                    alpha = if (t > 0.9f) ((1f - t) / 0.1f).coerceIn(0f, 1f) else 1f
+                },
     ) {
         AsyncImage(
             model =

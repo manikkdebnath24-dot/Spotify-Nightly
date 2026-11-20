@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.height
@@ -186,6 +187,8 @@ fun NowPlayingScreen(
             )
         }
     var contentReady by remember { mutableStateOf(false) }
+    // derivedStateOf, so the player is told "expanded" once rather than on every frame.
+    val expanded by remember { androidx.compose.runtime.derivedStateOf { motion.progress() > 0.9f } }
 
     LaunchedEffect(Unit) {
         // One frame so the overlay is on screen before the most expensive composition in the app
@@ -200,7 +203,9 @@ fun NowPlayingScreen(
             Modifier
                 .fillMaxSize()
                 // The page behind dims as the player arrives, and lifts as it leaves.
-                .background(Color.Black.copy(alpha = 0.55f * motion.progress())),
+                // Drawn, not composed: reading the motion in composition here would recompose the
+                // whole player on every frame of the slide.
+                .drawBehind { drawRect(Color.Black.copy(alpha = 0.55f * motion.progress())) },
     ) {
         if (contentReady) {
             Box(
@@ -223,7 +228,7 @@ fun NowPlayingScreen(
                 NowPlayingScreenContent(
                     sharedViewModel = sharedViewModel,
                     navController = navController,
-                    isExpanded = motion.progress() > 0.9f,
+                    isExpanded = expanded,
                     dismissIcon = SpotifyIcons.KeyboardArrowDown,
                     onDismiss = { motion.close() },
                 )
@@ -231,7 +236,7 @@ fun NowPlayingScreen(
             // Above the player, drawn last: the cover leaving the mini player and landing on the
             // player's own cover.
             PlayerFlight(
-                progress = motion.progress(),
+                progress = { motion.progress() },
                 artwork = flyingTrack?.songEntity?.thumbnails,
             )
             // Pull down anywhere on the top strip to send it back, following the finger.
