@@ -40,13 +40,14 @@ fun PlayerFlight(
     artwork: Any?,
     modifier: Modifier = Modifier,
 ) {
-    val start = PlayerDock.coverBounds ?: return
+    // BitChord's dock is the one source of both ends and of the fraction between them.
+    val start = AppPlayerDock.miniArtOnScreen() ?: return
     var page by remember { mutableStateOf(IntSize.Zero) }
     if (page == IntSize.Zero) {
         Box(modifier.fillMaxSize().onSizeChanged { page = it })
         return
     }
-    val end = PlayerDock.playerArtBounds ?: estimatedArtRect(page)
+    val end = playerCoverRect ?: estimatedArtRect(page)
     if (end.width <= 0f || end.height <= 0f) return
 
     val density = LocalDensity.current

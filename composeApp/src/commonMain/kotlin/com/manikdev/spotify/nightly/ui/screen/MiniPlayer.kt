@@ -120,7 +120,7 @@ import com.manikdev.spotify.nightly.extension.LeftToRight
 import com.manikdev.spotify.nightly.extension.elapsedLabel
 import com.manikdev.spotify.nightly.extension.formatDuration
 import com.manikdev.spotify.nightly.getPlatform
-import com.manikdev.spotify.nightly.ui.player.PlayerDock
+import com.manikdev.spotify.nightly.ui.player.AppPlayerDock
 import com.manikdev.spotify.nightly.ui.component.ExplicitBadge
 import com.manikdev.spotify.nightly.ui.component.HeartCheckBox
 import com.manikdev.spotify.nightly.ui.component.PlayPauseButton
@@ -755,7 +755,7 @@ fun MiniPlayer(
                                     .clip(ArtworkShape)
                                     .hoverable(artworkInteraction)
                                     // The player flies from here. BitChord's dock, one report.
-                                    .onGloballyPositioned { PlayerDock.reportCover(it.boundsInWindow()) },
+                                    .onGloballyPositioned { AppPlayerDock.reportMiniArt(it, 6.dp) },
                             contentAlignment = Alignment.Center,
                         ) {
                             AsyncImage(

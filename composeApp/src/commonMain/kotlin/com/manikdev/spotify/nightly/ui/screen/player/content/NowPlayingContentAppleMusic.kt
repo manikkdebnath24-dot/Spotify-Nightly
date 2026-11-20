@@ -50,7 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.manikdev.spotify.nightly.ui.player.PlayerDock
+import com.manikdev.spotify.nightly.ui.player.reportPlayerCover
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
@@ -984,7 +984,7 @@ private fun AppleMusicArtworkPage(
                         // a bounds report and nothing else: no URL, no size hint, no cache key and
                         // no decode change - the artwork path the thumbnail lock protects is
                         // untouched.
-                        .onGloballyPositioned { PlayerDock.reportPlayerArt(it.boundsInWindow()) },
+                        .onGloballyPositioned { reportPlayerCover(it.boundsInWindow()) },
             ) {
                 AsyncImage(
                     model = coverRequest,

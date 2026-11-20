@@ -91,7 +91,7 @@ import com.manikdev.spotify.nightly.extension.hsvToColor
 import com.manikdev.spotify.nightly.extension.parseTimestampToMilliseconds
 import com.manikdev.spotify.nightly.extension.rememberIsInPipMode
 import com.manikdev.spotify.nightly.getPlatform
-import com.manikdev.spotify.nightly.ui.player.PlayerDock
+import com.manikdev.spotify.nightly.ui.player.AppPlayerDock
 import com.manikdev.spotify.nightly.ui.player.PlayerSheetMotion
 import com.manikdev.spotify.nightly.ui.player.PlayerFlight
 import com.manikdev.spotify.nightly.ui.component.AddLyricsSheet
@@ -185,17 +185,27 @@ fun NowPlayingScreen(
     var pageHeightPx by remember {
         mutableFloatStateOf(windowInfo.containerSize.height.toFloat().takeIf { it > 0f } ?: 1f)
     }
+    // One distance for both the motion and the dock, so `openFraction()` and the spring can never
+    // disagree about how far the player has come.
+    val travelPx = (pageHeightPx * 0.85f).coerceAtLeast(1f)
     val motion =
         remember(scope) {
             PlayerSheetMotion(
                 scope = scope,
-                travelPx = { PlayerDock.startTravelPx(pageHeightPx) },
+                travelPx = { travelPx },
                 onClosed = onDismiss,
             )
         }
     var contentReady by remember { mutableStateOf(false) }
     // derivedStateOf, so the player is told "expanded" once rather than on every frame.
     val expanded by remember { androidx.compose.runtime.derivedStateOf { motion.progress() > 0.9f } }
+
+    // Hand the dock the two numbers BitChord's PlayerDock reads: where the player stands, and how
+    // far it has to travel. Set here because this overlay owns the sheet, as their host does.
+    LaunchedEffect(motion, travelPx) {
+        AppPlayerDock.sheetTravel = travelPx
+        AppPlayerDock.sheetOffset = { motion.positionPx() }
+    }
 
     LaunchedEffect(Unit) {
         // One frame so the overlay is on screen before the most expensive composition in the app
