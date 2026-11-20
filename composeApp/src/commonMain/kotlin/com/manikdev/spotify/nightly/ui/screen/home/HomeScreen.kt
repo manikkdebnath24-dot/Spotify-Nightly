@@ -1016,24 +1016,6 @@ fun HomeScreen(
                                 }
                             }
                             item {
-                                AnimatedVisibility(
-                                    visible = moodMomentAndGenre != null,
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .padding(horizontal = 15.dp),
-                                    ) {
-                                        moodMomentAndGenre?.let {
-                                            MoodMomentAndGenre(
-                                                mood = it,
-                                                navController = navController,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            item {
                                 Column(
                                     Modifier
                                         .padding(vertical = 10.dp)

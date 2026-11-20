@@ -249,6 +249,14 @@ fun NowPlayingScreen(
                             // rises out of the bar it was tapped on. PlayerDock measures the
                             // cover; the destination is an estimate of where the artwork rests.
                             translationY = (1f - t) * PlayerDock.startTravelPx(size.height)
+                            // BitChord's open grows the player out of the bar rather than sliding
+                            // it: a small scale up from 92% on the way in, back down on the way
+                            // out. It costs a little softness for the length of the motion - the
+                            // same trade BitChord makes, and the reason the cover itself is drawn
+                            // separately by PlayerFlight, sharp, on top.
+                            val grow = 0.92f + 0.08f * t
+                            scaleX = grow
+                            scaleY = grow
                         },
             ) {
                 // The player is the most expensive composition in the app - artwork, palette,
