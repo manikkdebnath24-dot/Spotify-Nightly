@@ -471,7 +471,11 @@ fun App(
         // Only a NEWER release is offered. This used to compare the tags for inequality, which told a
         // build ahead of the latest release (dev, beta) to "update" back down to it, and told every
         // F-Droid-channel user to update on each launch: that channel's tag carries no leading "v".
-        if (viewModel.showedUpdateDialog && VersionManager.isBehind(response.tagName)) {
+        // The old AlertDialog is no longer raised. The in-app updater already answers the same
+        // release feed with its own sheet, so a user who had both ended up looking at two update
+        // popups stacked on top of each other - the dialog and the sheet, one behind the other.
+        // The sheet is the one that can download and install, so it is the only one left.
+        if (false && viewModel.showedUpdateDialog && VersionManager.isBehind(response.tagName)) {
             shouldShowUpdateDialog = true
         }
     }
