@@ -446,16 +446,6 @@ class MainActivity : AppCompatActivity() {
                     preferredDisplayModeId = best.modeId
                     preferredRefreshRate = best.refreshRate
                 }
-            // The two above are a request the OEM is free to ignore, and on ColorOS (this device is
-            // an OPPO) it is ignored: the frame log sat at 53-60fps on a 120Hz panel, which is the
-            // whole reason scrolling and every animation felt heavy. setFrameRate is the API the
-            // platform actually honours on API 30+, so the window asks for the panel's own rate
-            // rather than for a display mode.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                runCatching {
-                    window.setFrameRate(best.refreshRate, android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-                }.onFailure { Logger.w("MainActivity", "setFrameRate: ${it.message}") }
-            }
         }.onFailure { Logger.w("MainActivity", "refresh rate: ${it.message}") }
     }
 

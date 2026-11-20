@@ -382,8 +382,6 @@ private fun UpdateSheet(
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = palette.chipBackground, thickness = 1.dp)
-            Spacer(Modifier.height(12.dp))
 
             // Pinned actions. The row crossfades to the progress readout while downloading and
             // never leaves the bottom of the sheet.
