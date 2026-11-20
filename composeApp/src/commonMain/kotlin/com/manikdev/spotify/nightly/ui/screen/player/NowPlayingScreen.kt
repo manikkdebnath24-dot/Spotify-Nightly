@@ -84,6 +84,7 @@ import com.manikdev.spotify.nightly.extension.parseTimestampToMilliseconds
 import com.manikdev.spotify.nightly.extension.rememberIsInPipMode
 import com.manikdev.spotify.nightly.getPlatform
 import com.manikdev.spotify.nightly.ui.player.PlayerDock
+import com.manikdev.spotify.nightly.ui.player.PlayerFlight
 import com.manikdev.spotify.nightly.ui.component.AddLyricsSheet
 import com.manikdev.spotify.nightly.ui.component.AddToPlaylistModalBottomSheet
 import com.manikdev.spotify.nightly.ui.component.FullscreenLyricsContent
@@ -154,6 +155,8 @@ fun NowPlayingScreen(
     onDismiss: () -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
+    // The cover in flight needs the artwork the mini player is showing, so it can hand it over.
+    val flyingTrack by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
     val sheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
@@ -258,6 +261,13 @@ fun NowPlayingScreen(
                     androidx.compose.runtime.withFrameNanos { }
                     contentReady = true
                 }
+                // BitChord's flying cover: the artwork travels from the mini player's own cover
+                // to the player's, drawn at the interpolated rectangle so it appears to grow out
+                // of the bar rather than slide up from nowhere. Same progress as the sheet.
+                PlayerFlight(
+                    progress = settle.value * (1f - dragProgress),
+                    thumbnails = flyingTrack?.songEntity?.thumbnails,
+                )
                 if (contentReady) {
                     NowPlayingScreenContent(
                         sharedViewModel = sharedViewModel,

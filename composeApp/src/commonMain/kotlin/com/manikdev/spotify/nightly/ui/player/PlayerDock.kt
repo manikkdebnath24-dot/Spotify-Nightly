@@ -27,6 +27,14 @@ object PlayerDock {
         coverBounds = null
     }
 
+    /** Where the player's own cover rests, reported by whichever style draws it. */
+    var playerArtBounds: Rect? = null
+        private set
+
+    fun reportPlayerArt(bounds: Rect) {
+        playerArtBounds = bounds
+    }
+
     /**
      * How far below its resting place the player starts, in pixels, for a page [pageHeight] tall.
      *
