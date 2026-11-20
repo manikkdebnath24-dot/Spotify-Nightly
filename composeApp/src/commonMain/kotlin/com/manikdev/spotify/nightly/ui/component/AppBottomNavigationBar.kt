@@ -3,7 +3,9 @@ package com.manikdev.spotify.nightly.ui.component
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -176,10 +178,22 @@ internal fun FlatTabBar(
     val selectedPosition = tabs.indexOfFirst { it.ordinal == selectedIndex }
     // Where a finger is holding the indicator, in tabs (0f = first); null when nobody is.
     var dragPosition by remember { mutableStateOf<Float?>(null) }
+    // The tab a tap just asked for, held until the navigation actually reports the new selection.
+    // Without it a tap animated the indicator back towards the OLD tab for a frame, and then again
+    // towards the new one once the back stack caught up - two moves where there should be one,
+    // which is what read as a bounce rather than a slide.
+    var pendingPosition by remember { mutableStateOf<Float?>(null) }
+    LaunchedEffect(selectedPosition) { pendingPosition = null }
     val indicatorOffset by animateDpAsState(
-        tabWidth * (dragPosition ?: selectedPosition.coerceAtLeast(0).toFloat()),
-        // Under the finger while dragging; on release it springs to the tab it was let go on.
-        animationSpec = if (dragPosition != null) snap() else spring(visibilityThreshold = Dp.VisibilityThreshold),
+        tabWidth * (dragPosition ?: pendingPosition ?: selectedPosition.coerceAtLeast(0).toFloat()),
+        // Under the finger while dragging, and one clean glide otherwise. A spring overshoots the
+        // tab it lands on, so a bar with no room for overshoot looked like it bounced off the edge.
+        animationSpec =
+            if (dragPosition != null) {
+                snap()
+            } else {
+                tween(durationMillis = 240, easing = FastOutSlowInEasing)
+            },
         label = "flatBarIndicator",
     )
     // The tab under the indicator lights up as it is dragged across.
@@ -213,6 +227,10 @@ internal fun FlatTabBar(
                                 onDragStart = { dragPosition = positionAt(it.x) },
                                 onDragEnd = {
                                     val target = dragPosition?.roundToInt()?.let(tabs::get)
+                                    // Hand the release position over as the pending one before the
+                                    // finger is dropped, so the indicator continues from where it was
+                                    // let go instead of jumping back to the old tab first.
+                                    pendingPosition = dragPosition
                                     dragPosition = null
                                     if (target != null && target.ordinal != selectedIndex) onTabSelected(target)
                                 },
@@ -251,7 +269,10 @@ internal fun FlatTabBar(
                                     .width(tabWidth)
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(FlatIndicatorHeight / 2))
-                                    .clickable { onTabSelected(screen) },
+                                    .clickable {
+                                        pendingPosition = position.toFloat()
+                                        onTabSelected(screen)
+                                    },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
