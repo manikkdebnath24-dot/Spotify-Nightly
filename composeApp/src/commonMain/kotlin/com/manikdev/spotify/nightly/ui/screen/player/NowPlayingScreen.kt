@@ -177,7 +177,14 @@ fun NowPlayingScreen(
     // that one value (0 at the mini player, 1 open), a finger adds `drag`, and nothing else moves.
     // BitChord's motion, ported: `held` is how far below fully open the player is, in pixels, and
     // every visual reads it. A tap springs it, a finger drags it, a flick carries its own speed in.
-    var pageHeightPx by remember { mutableFloatStateOf(0f) }
+    // Seeded from the window, not left at zero until the content has been laid out. It used to
+    // start at 0, and `motion.open()` ran in the same frame - so the travel distance was zero when
+    // the slide began, progress was 1 immediately, and the player appeared with no motion at all.
+    // That is why the animation looked like it had never been added.
+    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+    var pageHeightPx by remember {
+        mutableFloatStateOf(windowInfo.containerSize.height.toFloat().takeIf { it > 0f } ?: 1f)
+    }
     val motion =
         remember(scope) {
             PlayerSheetMotion(
