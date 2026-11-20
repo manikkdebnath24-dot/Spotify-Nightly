@@ -818,7 +818,16 @@ fun HomeScreen(
                 )
             },
         ) {
-            Crossfade(targetState = loading, label = "Home Shimmer") { loading ->
+            // No crossfade between the skeleton and the feed. A Crossfade keeps BOTH trees
+            // composed and drawn for its whole duration, and the default is 300 ms - so for a third
+            // of a second the app composed the entire Home feed AND the whole shimmer skeleton at
+            // the same time, on the frame that is already the heaviest one after launch. The
+            // skeleton is gone the moment the feed is ready now.
+            Crossfade(
+                targetState = loading,
+                animationSpec = tween(durationMillis = 0),
+                label = "Home Shimmer",
+            ) { loading ->
                 if (!loading) {
                     if (homeData.isEmpty()) {
                         OfflineErrorState(
