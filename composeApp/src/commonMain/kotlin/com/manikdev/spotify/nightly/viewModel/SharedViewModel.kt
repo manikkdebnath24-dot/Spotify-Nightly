@@ -1364,6 +1364,18 @@ class SharedViewModel(
                     },
             )
 
+        // Lyrics that arrived from the network are written to the offline table here, once, keyed
+        // by the song they belong to. Until now only lyrics the user typed were ever saved, so a
+        // downloaded or cached song had no lyrics the moment the network went away even though the
+        // app had already fetched them a dozen times. OFFLINE means they came out of that table,
+        // and translated lyrics are a separate row - neither is written back.
+        if (!isTranslatedLyrics && lyricsProvider != LyricsProvider.OFFLINE) {
+            viewModelScope.launch {
+                runCatching { lyricsCanvasRepository.insertLyrics(lyrics.toLyricsEntity(videoId)) }
+                    .onFailure { Logger.w(tag, "could not cache lyrics for $videoId: ${it.message}") }
+            }
+        }
+
         if (isTranslatedLyrics && lyricsProvider != LyricsProvider.AI) {
             // Skip sync validation for AI translations — timestamps are copied programmatically
             val originalLyrics = _nowPlayingScreenData.value.lyricsData?.lyrics
