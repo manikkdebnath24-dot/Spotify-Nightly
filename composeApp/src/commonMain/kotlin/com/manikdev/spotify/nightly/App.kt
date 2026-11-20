@@ -234,6 +234,12 @@ fun App(
     var userStarted by remember {
         mutableStateOf(false)
     }
+    // The sheet used to consume the back press itself. With a plain overlay nothing did, so back
+    // closed the app instead of the player.
+    com.manikdev.spotify.nightly.expect.ui.PlatformBackHandler(
+        enabled = isShowNowPlaylistScreen,
+        onBack = { isShowNowPlaylistScreen = false },
+    )
     LaunchedEffect(isShowNowPlaylistScreen) {
         if (isShowNowPlaylistScreen) userStarted = true
     }
@@ -565,7 +571,10 @@ fun App(
             containerColor =
                 if (isDesktopShell) desktopWindow else MaterialTheme.colorScheme.background,
             bottomBar = {
-                if (!isTablet) {
+                // The player is a full-screen overlay now, not a Material sheet in its own window,
+                // so the Scaffold's bottom bar would draw straight over it - which is exactly what
+                // the screenshot showed: the mini player and the nav bar sitting on the player.
+                if (!isTablet && !isShowNowPlaylistScreen) {
                     AnimatedVisibility(
                         isNavBarVisible,
                         enter = fadeIn() + slideInHorizontally(),
