@@ -42,6 +42,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -192,8 +200,28 @@ private fun UpdateSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val palette = updatePalette()
+    val scope = rememberCoroutineScope()
+    // One value drives both the arrival and the departure, so the sheet cannot leave on a
+    // different curve from the one it arrived on. Arrival carries a light overshoot; leaving is
+    // critically damped, because a bounce on the way out reads as indecision.
+    val settle = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        settle.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.72f, stiffness = 240f),
+        )
+    }
+    val close: () -> Unit = {
+        scope.launch {
+            settle.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f),
+            )
+            onDismiss()
+        }
+    }
     if (state is UpdateUiState.Checking) {
-        ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        ModalBottomSheet(onDismissRequest = close, sheetState = sheetState) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -235,11 +263,25 @@ private fun UpdateSheet(
     val halfScreen = 320.dp
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = close,
         sheetState = sheetState,
         containerColor = palette.container,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        // The content rides the same value as the sheet: fade, a few dp of lift and a hair of
+        // scale. Alpha and translation cost no pixels, so nothing here softens what it draws.
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        val t = settle.value
+                        alpha = t.coerceIn(0f, 1f)
+                        translationY = (1f - t) * 28.dp.toPx()
+                        val scale = 0.97f + 0.03f * t
+                        scaleX = scale
+                        scaleY = scale
+                    }.padding(horizontal = 20.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // The app's own launcher icon, clipped to a rounded square.
                 if (icon != null) {
@@ -511,7 +553,7 @@ private fun UpdateSheet(
                 }
             }
 
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = close, modifier = Modifier.fillMaxWidth()) {
                 Text("Maybe later")
             }
             Spacer(Modifier.height(12.dp))
