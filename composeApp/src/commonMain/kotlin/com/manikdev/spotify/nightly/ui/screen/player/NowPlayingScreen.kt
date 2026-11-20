@@ -261,13 +261,6 @@ fun NowPlayingScreen(
                     androidx.compose.runtime.withFrameNanos { }
                     contentReady = true
                 }
-                // BitChord's flying cover: the artwork travels from the mini player's own cover
-                // to the player's, drawn at the interpolated rectangle so it appears to grow out
-                // of the bar rather than slide up from nowhere. Same progress as the sheet.
-                PlayerFlight(
-                    progress = settle.value * (1f - dragProgress),
-                    artwork = flyingTrack?.songEntity?.thumbnails,
-                )
                 if (contentReady) {
                     NowPlayingScreenContent(
                         sharedViewModel = sharedViewModel,
@@ -279,6 +272,13 @@ fun NowPlayingScreen(
                         },
                     )
                 }
+                // AFTER the player, not before: children draw in order, so the flight drawn first
+                // was underneath the whole player and invisible - which is why the animation looked
+                // like it had not been added at all.
+                PlayerFlight(
+                    progress = settle.value * (1f - dragProgress),
+                    artwork = flyingTrack?.songEntity?.thumbnails,
+                )
             }
         }
     }

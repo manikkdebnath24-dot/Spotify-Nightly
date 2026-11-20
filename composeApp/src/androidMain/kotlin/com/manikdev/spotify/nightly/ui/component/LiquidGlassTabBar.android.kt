@@ -381,7 +381,12 @@ class DampedDragAnimation(
     val onDragStopped: DampedDragAnimation.() -> Unit,
     val onDrag: DampedDragAnimation.(size: IntSize, dragAmount: Offset) -> Unit,
 ) {
-    private val valueAnimationSpec = spring(1f, 1000f, visibilityThreshold)
+    // The blob's glide between tabs. It used to be spring(1f, 1000f): critically damped, so it
+    // never bounced, but SO stiff that it covered the distance in about a tenth of a second and
+    // read as a jump rather than a slide - the "hutt kore chole jacche" of the glass bar, while
+    // the flat bar next to it glided. 380f is the same no-bounce curve at a speed the eye can
+    // follow, matching the flat bar's 240 ms tween.
+    private val valueAnimationSpec = spring(1f, 380f, visibilityThreshold)
     private val velocityAnimationSpec = spring(0.5f, 300f, visibilityThreshold * 10f)
     private val pressProgressAnimationSpec = spring(1f, 1000f, 0.001f)
     private val scaleXAnimationSpec = spring(0.6f, 250f, 0.001f)
