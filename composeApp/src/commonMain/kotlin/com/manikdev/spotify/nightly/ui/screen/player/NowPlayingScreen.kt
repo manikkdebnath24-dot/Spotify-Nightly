@@ -266,7 +266,7 @@ fun NowPlayingScreen(
                 // of the bar rather than slide up from nowhere. Same progress as the sheet.
                 PlayerFlight(
                     progress = settle.value * (1f - dragProgress),
-                    thumbnails = flyingTrack?.songEntity?.thumbnails,
+                    artwork = flyingTrack?.songEntity?.thumbnails,
                 )
                 if (contentReady) {
                     NowPlayingScreenContent(

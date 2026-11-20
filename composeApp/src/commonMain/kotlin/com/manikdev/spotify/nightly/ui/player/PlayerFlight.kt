@@ -43,7 +43,7 @@ import kotlin.math.roundToInt
 @Composable
 fun PlayerFlight(
     progress: Float,
-    thumbnails: List<Any>?,
+    artwork: Any?,
     modifier: Modifier = Modifier,
 ) {
     val start = PlayerDock.coverBounds ?: return
@@ -81,7 +81,7 @@ fun PlayerFlight(
             model =
                 ImageRequest
                     .Builder(LocalPlatformContext.current)
-                    .data(thumbnails)
+                    .data(artwork)
                     .crossfade(0)
                     .build(),
             contentDescription = null,
