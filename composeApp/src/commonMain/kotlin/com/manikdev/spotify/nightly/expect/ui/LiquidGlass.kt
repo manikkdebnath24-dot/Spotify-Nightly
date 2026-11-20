@@ -67,7 +67,11 @@ fun Modifier.drawBackdropCustomShape(
                 // backgrounds ("đục trắng"). Darkening is done in onDrawSurface (keeps "đục đen").
                 brightness = 0.05f,
                 contrast = 1f,
-                saturation = 1.5f,
+                // No saturation boost. 1.5 turned whatever bright artwork scrolled under the bar
+                // into a saturated smear - a red sleeve became a glowing orange blob inside the
+                // nav bar and the search circle. Glass shows what is behind it; it does not make
+                // it louder.
+                saturation = 1f,
             )
             // Blur is the single most expensive thing on this screen: it runs a render
             // shader over the whole surface every frame, and on 120 Hz panels the 16 dp
@@ -105,7 +109,10 @@ fun Modifier.drawBackdropCustomShape(
         },
         shape = { shape },
         onDrawSurface = {
-            val darken = lerp(0.12f, 0.5f, ((luminanceAnimation - 0.3f) / 0.5f).coerceIn(0f, 1f))
+            // The floor is what keeps a bright sleeve from showing through as a blob: at 0.12 a
+            // white cover behind the bar left the icons sitting on raw artwork. The ceiling stays
+            // where it was, so on a dark page the bar is still the same dark glass.
+            val darken = lerp(0.42f, 0.62f, ((luminanceAnimation - 0.3f) / 0.5f).coerceIn(0f, 1f))
             drawRect(Color.Black.copy(alpha = darken))
         },
     )
