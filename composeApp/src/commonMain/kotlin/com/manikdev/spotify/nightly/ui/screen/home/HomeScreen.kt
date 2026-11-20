@@ -311,11 +311,24 @@ fun HomeScreen(
     // The "Music video" shelf is dropped from the feed entirely. It is the one shelf whose cards
     // are 16:9 videos rather than songs, and it sat right where the page felt worst to scroll.
     // Matched on its title, the way the account-name shelves are matched above.
-    val musicVideoTitle = stringResource(Res.string.music_video)
     val homeShelves =
-        remember(homeData, accountInfo, musicVideoTitle) {
+        remember(homeData, accountInfo) {
             val accountName = accountInfo?.first
-            val shelves = homeData.filter { !it.title.equals(musicVideoTitle, ignoreCase = true) }
+            // Matched on the shelf's own title as YouTube sends it. The Compose string resource for
+            // this one is not in the generated set this module can see, so the literal is used -
+            // and the shelf is also recognised by its shape, every card a video, so a translated
+            // title cannot slip it back in.
+            val shelves =
+                homeData.filterNot { shelf ->
+                    shelf.title.equals("Music video", ignoreCase = true) ||
+                        // Every card a 16:9 video. Songs are videos too, but they are square cards,
+                        // so the aspect is what tells the two shelves apart - checking videoId alone
+                        // would have taken the song shelves with it.
+                        (
+                            shelf.contents.isNotEmpty() &&
+                                shelf.contents.all { it != null && it.homeCardAspectRatio() != 1f }
+                        )
+                }
             if (accountName.isNullOrBlank()) {
                 shelves
             } else {
