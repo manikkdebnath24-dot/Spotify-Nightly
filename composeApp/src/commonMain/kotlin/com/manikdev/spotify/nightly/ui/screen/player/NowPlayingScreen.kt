@@ -232,7 +232,12 @@ fun NowPlayingScreen(
                         .onSizeChanged { pageHeightPx = it.height.toFloat() }
                         .graphicsLayer {
                             val t = motion.progress()
-                            alpha = t.coerceIn(0f, 1f)
+                            // No fade on the player itself. The recording showed the content
+                            // arriving at its resting place already, only translucent - a fade
+                            // standing in for a slide, because alpha was doing the visible work
+                            // while the translation was barely there. BitChord fades only the
+                            // page behind; the player travels.
+                            alpha = 1f
                             // From the mini player's own cover, not a fixed lift.
                             // Exactly where the motion says the player stands.
                             translationY = motion.positionPx()
