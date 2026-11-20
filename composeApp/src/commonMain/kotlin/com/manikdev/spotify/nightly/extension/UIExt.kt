@@ -576,7 +576,13 @@ expect fun KeepScreenOn()
 
 @Composable
 fun LazyListState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
-    LaunchedEffect(this) {
+    // How far the first item has to move before the bottom bar folds away. It used to fold only
+    // once the list had scrolled past its SECOND item - on Home those two items are the hero shelf
+    // and the next shelf, so the bar stayed expanded until you were most of a screen down, near the
+    // Music video row. BitChord and Echo fold on the first nudge of the finger, which is what makes
+    // the bar feel attached to the scroll, so the rule is distance now, not item count.
+    val collapseAfterPx = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.toPx() }
+    LaunchedEffect(this, collapseAfterPx) {
         var previousIndex = firstVisibleItemIndex
         var previousOffset = firstVisibleItemScrollOffset
         var lastExpanded: Boolean? = null
@@ -589,7 +595,7 @@ fun LazyListState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
                         index != previousIndex -> index < previousIndex
                         else -> offset <= previousOffset
                     }
-                val expanded = index <= 1 || scrollingUp
+                val expanded = index == 0 && offset <= collapseAfterPx
 
                 // The bottom bar only needs a new value when its visual state changes.
                 // Do not write Compose state on every scroll frame.
