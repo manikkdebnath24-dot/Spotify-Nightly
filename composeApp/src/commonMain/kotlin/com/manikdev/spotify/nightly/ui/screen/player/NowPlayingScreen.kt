@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -90,6 +91,7 @@ import com.manikdev.spotify.nightly.extension.parseTimestampToMilliseconds
 import com.manikdev.spotify.nightly.extension.rememberIsInPipMode
 import com.manikdev.spotify.nightly.getPlatform
 import com.manikdev.spotify.nightly.ui.player.PlayerDock
+import com.manikdev.spotify.nightly.ui.player.PlayerSheetMotion
 import com.manikdev.spotify.nightly.ui.player.PlayerFlight
 import com.manikdev.spotify.nightly.ui.component.AddLyricsSheet
 import com.manikdev.spotify.nightly.ui.component.AddToPlaylistModalBottomSheet
@@ -172,24 +174,25 @@ fun NowPlayingScreen(
     // PlayerSheetMotion holds one value for "how far below open the player is" and everything rides
     // it. This is the same idea with the sheet replaced by a plain full-screen overlay: `settle` is
     // that one value (0 at the mini player, 1 open), a finger adds `drag`, and nothing else moves.
-    val settle = remember { Animatable(0f) }
-    val drag = remember { Animatable(0f) }
-    var contentReady by remember { mutableStateOf(false) }
-
-    val close: () -> Unit = {
-        scope.launch {
-            // One curve, both directions: the close is the open played backwards.
-            settle.animateTo(0f, spring(Spring.DampingRatioNoBouncy, PlayerSlideStiffness))
-            onDismiss()
+    // BitChord's motion, ported: `held` is how far below fully open the player is, in pixels, and
+    // every visual reads it. A tap springs it, a finger drags it, a flick carries its own speed in.
+    var pageHeightPx by remember { mutableFloatStateOf(0f) }
+    val motion =
+        remember(scope) {
+            PlayerSheetMotion(
+                scope = scope,
+                travelPx = { PlayerDock.startTravelPx(pageHeightPx) },
+                onClosed = onDismiss,
+            )
         }
-    }
+    var contentReady by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         // One frame so the overlay is on screen before the most expensive composition in the app
-        // runs, then the slide - the same order that made tapping the mini player feel instant.
+        // runs, then BitChord's slide - the same order that made the tap feel instant.
         androidx.compose.runtime.withFrameNanos { }
         contentReady = true
-        settle.animateTo(1f, spring(Spring.DampingRatioNoBouncy, PlayerSlideStiffness))
+        motion.open()
     }
 
     Box(
@@ -197,18 +200,20 @@ fun NowPlayingScreen(
             Modifier
                 .fillMaxSize()
                 // The page behind dims as the player arrives, and lifts as it leaves.
-                .background(Color.Black.copy(alpha = 0.55f * settle.value)),
+                .background(Color.Black.copy(alpha = 0.55f * motion.progress())),
     ) {
         if (contentReady) {
             Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .onSizeChanged { pageHeightPx = it.height.toFloat() }
                         .graphicsLayer {
-                            val t = settle.value
+                            val t = motion.progress()
                             alpha = t.coerceIn(0f, 1f)
                             // From the mini player's own cover, not a fixed lift.
-                            translationY = (1f - t) * PlayerDock.startTravelPx(size.height) + drag.value
+                            // Exactly where the motion says the player stands.
+                            translationY = motion.positionPx()
                             // Grows out of the bar rather than sliding up from nowhere.
                             val grow = 0.92f + 0.08f * t
                             scaleX = grow
@@ -218,15 +223,15 @@ fun NowPlayingScreen(
                 NowPlayingScreenContent(
                     sharedViewModel = sharedViewModel,
                     navController = navController,
-                    isExpanded = settle.value > 0.9f,
+                    isExpanded = motion.progress() > 0.9f,
                     dismissIcon = SpotifyIcons.KeyboardArrowDown,
-                    onDismiss = { close() },
+                    onDismiss = { motion.close() },
                 )
             }
             // Above the player, drawn last: the cover leaving the mini player and landing on the
             // player's own cover.
             PlayerFlight(
-                progress = settle.value,
+                progress = motion.progress(),
                 artwork = flyingTrack?.songEntity?.thumbnails,
             )
             // Pull down anywhere on the top strip to send it back, following the finger.
@@ -237,21 +242,15 @@ fun NowPlayingScreen(
                         .fillMaxWidth()
                         .height(72.dp)
                         .pointerInput(Unit) {
+                            var velocity = 0f
                             detectVerticalDragGestures(
-                                onDragEnd = {
-                                    scope.launch {
-                                        if (drag.value > 120.dp.toPx()) {
-                                            close()
-                                        } else {
-                                            drag.animateTo(0f, spring(Spring.DampingRatioNoBouncy, 400f))
-                                        }
-                                    }
-                                },
-                                onDragCancel = {
-                                    scope.launch { drag.animateTo(0f, spring(Spring.DampingRatioNoBouncy, 400f)) }
-                                },
-                            ) { _, dy ->
-                                scope.launch { drag.snapTo((drag.value + dy).coerceAtLeast(0f)) }
+                                onDragStart = { velocity = 0f },
+                                onDragEnd = { motion.release(velocity) },
+                                onDragCancel = { motion.release(0f) },
+                            ) { change, dy ->
+                                velocity = dy * 60f
+                                motion.drag(dy)
+                                change.consume()
                             }
                         },
             )
