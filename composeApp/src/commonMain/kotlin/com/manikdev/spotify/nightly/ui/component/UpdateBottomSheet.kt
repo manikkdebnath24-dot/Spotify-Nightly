@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -114,6 +115,31 @@ private fun updatePalette(): UpdatePalette {
             accent = Color(0xFF0B57D0),
             chipBackground = Color(0xFFD6E3FF),
             chipText = Color(0xFF0B3E96),
+        )
+    }
+}
+
+
+/** One slice of the progress capsule: a tinted pill with a flat edge where it was cut. */
+@Composable
+private fun CapsulePiece(
+    text: String,
+    shape: RoundedCornerShape,
+    palette: UpdatePalette,
+    style: androidx.compose.ui.text.TextStyle,
+    weight: FontWeight,
+    startPadding: androidx.compose.ui.unit.Dp,
+    endPadding: androidx.compose.ui.unit.Dp,
+) {
+    Surface(shape = shape, color = palette.chipBackground) {
+        Text(
+            text = text,
+            style = style,
+            fontWeight = weight,
+            color = palette.chipText,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(start = startPadding, end = endPadding, top = 6.dp, bottom = 6.dp),
         )
     }
 }
@@ -266,7 +292,17 @@ private fun UpdateSheet(
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // A quiet overline, so the block below reads as a changelog rather than as stray text
+            // under the version row.
+            Text(
+                text = "WHAT'S NEW",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = palette.secondaryText,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
 
             Column(
                 modifier =
@@ -303,6 +339,8 @@ private fun UpdateSheet(
                 }
             }
 
+            Spacer(Modifier.height(14.dp))
+            HorizontalDivider(color = palette.chipBackground, thickness = 1.dp)
             Spacer(Modifier.height(12.dp))
 
             // Pinned actions. The row crossfades to the progress readout while downloading and
@@ -370,15 +408,17 @@ private fun UpdateSheet(
                             }
                             }
                             Spacer(Modifier.height(10.dp))
-                            // One capsule, cut down the middle: the percentage is the left half and
-                            // the transfer numbers the right one, with a small gap where the cut is.
-                            // Both halves are centred under the bar rather than pushed to the edges.
+                            // Three pieces of one capsule, each cut on its own: the percentage,
+                            // the transfer rate, and how much of the file has arrived. The outer
+                            // two keep a rounded end and a flat inner one, the middle is flat on
+                            // both sides, so the row reads as a single capsule sliced twice.
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Surface(
+                                CapsulePiece(
+                                    text = "${(current.progress * 100).toInt()}%",
                                     shape =
                                         RoundedCornerShape(
                                             topStart = 50.dp,
@@ -386,45 +426,42 @@ private fun UpdateSheet(
                                             topEnd = 0.dp,
                                             bottomEnd = 0.dp,
                                         ),
-                                    color = palette.chipBackground,
-                                ) {
-                                    Text(
-                                        text = "${(current.progress * 100).toInt()}%",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = palette.chipText,
-                                        maxLines = 1,
-                                        modifier = Modifier.padding(start = 14.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+                                    palette = palette,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    weight = FontWeight.SemiBold,
+                                    startPadding = 14.dp,
+                                    endPadding = 10.dp,
+                                )
+                                if (current.bytesPerSecond > 0) {
+                                    Spacer(Modifier.width(6.dp))
+                                    CapsulePiece(
+                                        text = formatSpeed(current.bytesPerSecond),
+                                        shape = RoundedCornerShape(0.dp),
+                                        palette = palette,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        weight = FontWeight.Medium,
+                                        startPadding = 10.dp,
+                                        endPadding = 10.dp,
                                     )
                                 }
-                                Spacer(Modifier.width(6.dp))
-                                Surface(
-                                    shape =
-                                        RoundedCornerShape(
-                                            topStart = 0.dp,
-                                            bottomStart = 0.dp,
-                                            topEnd = 50.dp,
-                                            bottomEnd = 50.dp,
-                                        ),
-                                    color = palette.chipBackground,
-                                ) {
-                                    Text(
+                                if (current.totalBytes > 0) {
+                                    Spacer(Modifier.width(6.dp))
+                                    CapsulePiece(
                                         text =
-                                            buildString {
-                                                if (current.bytesPerSecond > 0) {
-                                                    append(formatSpeed(current.bytesPerSecond))
-                                                    append(" · ")
-                                                }
-                                                if (current.totalBytes > 0) {
-                                                    append(formatBytes(current.bytesDownloaded))
-                                                    append(" / ")
-                                                    append(formatBytes(current.totalBytes))
-                                                }
-                                            },
+                                            "${formatBytes(current.bytesDownloaded)} / " +
+                                                formatBytes(current.totalBytes),
+                                        shape =
+                                            RoundedCornerShape(
+                                                topStart = 0.dp,
+                                                bottomStart = 0.dp,
+                                                topEnd = 50.dp,
+                                                bottomEnd = 50.dp,
+                                            ),
+                                        palette = palette,
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = palette.chipText,
-                                        maxLines = 1,
-                                        modifier = Modifier.padding(start = 10.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+                                        weight = FontWeight.Medium,
+                                        startPadding = 10.dp,
+                                        endPadding = 14.dp,
                                     )
                                 }
                             }

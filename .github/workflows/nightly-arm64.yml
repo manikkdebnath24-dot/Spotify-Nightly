@@ -106,10 +106,10 @@ jobs:
           PREV="$(git describe --tags --abbrev=0 2>/dev/null || true)"
           if [ -n "$PREV" ]; then
             RANGE="$PREV..HEAD"
-            echo "Changes since $PREV" > notes.md
+            echo "What's new in $NIGHTLY_VERSION" > notes.md
           else
             RANGE="HEAD~1..HEAD"
-            echo "First nightly build" > notes.md
+            echo "First nightly build of $NIGHTLY_VERSION" > notes.md
           fi
           echo "" >> notes.md
           # "- " bullets, which the in-app sheet turns into its own bullet lines.

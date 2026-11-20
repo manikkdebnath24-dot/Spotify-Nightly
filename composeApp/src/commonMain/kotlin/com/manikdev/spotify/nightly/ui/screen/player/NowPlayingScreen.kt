@@ -230,15 +230,27 @@ fun NowPlayingScreen(
                             translationY = (1f - t) * 120.dp.toPx()
                         },
             ) {
-                NowPlayingScreenContent(
-                    sharedViewModel = sharedViewModel,
-                    navController = navController,
-                    isExpanded = sheetState.currentValue == SheetValue.Expanded,
-                    dismissIcon = SpotifyIcons.KeyboardArrowDown,
-                    onDismiss = {
-                        hideSheet()
-                    },
-                )
+                // The player is the most expensive composition in the app - artwork, palette,
+                // lyrics, glass - and it used to run in the same frame as the tap, so the sheet
+                // could not even appear until all of it was built. Deferring it by one frame lets
+                // the sheet draw first and the player land immediately after, which is the
+                // difference between "it opened" and "it thought about it".
+                var contentReady by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    androidx.compose.runtime.withFrameNanos { }
+                    contentReady = true
+                }
+                if (contentReady) {
+                    NowPlayingScreenContent(
+                        sharedViewModel = sharedViewModel,
+                        navController = navController,
+                        isExpanded = sheetState.currentValue == SheetValue.Expanded,
+                        dismissIcon = SpotifyIcons.KeyboardArrowDown,
+                        onDismiss = {
+                            hideSheet()
+                        },
+                    )
+                }
             }
         }
     }
