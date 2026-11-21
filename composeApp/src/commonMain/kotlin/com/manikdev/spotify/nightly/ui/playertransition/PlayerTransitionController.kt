@@ -20,6 +20,7 @@ import kotlin.math.abs
  * The sheet remains Material 3; only the artwork portal and transition progress are custom.
  */
 @Stable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 class PlayerTransitionController(
     private val scope: CoroutineScope,
     private val dock: PlayerDock,

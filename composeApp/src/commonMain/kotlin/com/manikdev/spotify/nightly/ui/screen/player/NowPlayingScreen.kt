@@ -174,7 +174,7 @@ fun NowPlayingScreen(
     DisposableEffect(transitionController) {
         playerDock?.pullController = transitionController
         onDispose {
-            if (playerDock?.pullController === transitionController) playerDock.pullController = null
+            if (playerDock?.pullController === transitionController) playerDock?.pullController = null
             playerDock?.transitionActive = false
             playerDock?.sheetOffsetProvider = null
         }
@@ -252,7 +252,8 @@ fun NowPlayingScreen(
                             // The sheet is allowed to move natively; only fade the heavy content
                             // slightly ahead of the artwork portal. This keeps Compose from scaling
                             // the whole player layer and preserves artwork sharpness.
-                            val t = if (dock.transitionActive) dock.transitionProgress else 1f
+                            val d = playerDock
+                            val t = if (d?.transitionActive == true) d.transitionProgress else 1f
                             alpha = (0.15f + 0.85f * t).coerceIn(0f, 1f)
                         },
             ) {
