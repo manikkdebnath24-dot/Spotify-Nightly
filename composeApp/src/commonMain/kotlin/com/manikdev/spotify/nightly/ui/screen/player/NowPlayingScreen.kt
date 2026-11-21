@@ -180,6 +180,13 @@ fun NowPlayingScreen(
         }
     }
 
+    // START the manual transition. The controller had open() and close() but nothing ever called
+    // them: the portal and the dock's transitionActive were never armed, so the artwork flight
+    // never ran and the player just appeared. This is the call that starts it.
+    LaunchedEffect(transitionController) {
+        transitionController?.open()
+    }
+
     // Keep the sheet's native movement, but sample its offset in a coroutine rather than exposing
     // a per-frame progress state to the whole player tree. Only the artwork portal and the
     // lightweight graphics layer consume that progress.
