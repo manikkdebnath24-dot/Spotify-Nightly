@@ -249,12 +249,13 @@ fun NowPlayingScreen(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            // The sheet is allowed to move natively; only fade the heavy content
-                            // slightly ahead of the artwork portal. This keeps Compose from scaling
-                            // the whole player layer and preserves artwork sharpness.
-                            val d = playerDock
-                            val t = if (d?.transitionActive == true) d.transitionProgress else 1f
-                            alpha = (0.15f + 0.85f * t).coerceIn(0f, 1f)
+                            // Fully visible, always. This alpha used to ride the dock's
+                            // transitionProgress, so whenever that progress failed to advance the
+                            // entire player sat at 15% opacity - the "stuck" full screen. The
+                            // player's visibility must not depend on a transition that may never
+                            // report: the sheet and the artwork portal move, the content does not
+                            // hide.
+                            alpha = 1f
                         },
             ) {
                 NowPlayingScreenContent(
