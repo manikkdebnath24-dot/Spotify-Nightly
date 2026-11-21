@@ -217,13 +217,6 @@ internal class DownloadUtils(
     ) {
         // Every download path ends here, so this is where a broadcast already known to be live
         // is turned away. One not known yet is refused when its stream resolves.
-        // The cover travels with the download. This is the same URL streaming uses, stored on the
-        // song row unchanged - no size hint added, nothing rewritten - so a cached song keeps its
-        // artwork in the Cached list, the mini player and the full-screen player after the feed
-        // that brought it is long gone. The thumbnail quality path is untouched.
-        runCatching {
-            songRepository.updateThumbnailsSongEntity(thumbnail, videoId).first()
-        }.onFailure { Logger.w("Download", "could not store the cover for $videoId: ${it.message}") }
         if (songRepository.getSongById(videoId).lastOrNull()?.isLive == true) {
             Logger.i("Download", "$videoId is a live stream, not downloading")
             songRepository.updateDownloadState(videoId, DownloadState.STATE_NOT_DOWNLOADED)
