@@ -153,9 +153,10 @@ fun NowPlayingScreen(
     val sheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
-            confirmValueChange = { value ->
-                value != SheetValue.Hidden || allowSheetHide
-            },
+            // Always allow the sheet to hide. This refused every Hidden transition unless a flag
+            // was set by one specific close path, so a back press - which asks the sheet to hide
+            // directly - was swallowed and the player could not be closed at all.
+            confirmValueChange = { true },
         )
     val playerDock = LocalPlayerDock.current
     var fullArtworkBounds by remember { mutableStateOf<Rect?>(null) }
@@ -178,13 +179,6 @@ fun NowPlayingScreen(
             playerDock?.transitionActive = false
             playerDock?.sheetOffsetProvider = null
         }
-    }
-
-    // START the manual transition. The controller had open() and close() but nothing ever called
-    // them: the portal and the dock's transitionActive were never armed, so the artwork flight
-    // never ran and the player just appeared. This is the call that starts it.
-    LaunchedEffect(transitionController) {
-        transitionController?.open()
     }
 
     // Keep the sheet's native movement, but sample its offset in a coroutine rather than exposing
