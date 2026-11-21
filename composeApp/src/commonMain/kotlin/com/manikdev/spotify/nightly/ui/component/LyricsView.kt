@@ -461,7 +461,14 @@ fun LyricsView(
     // though Settings hides the option below Android 12 — a DataStore restored from a backup, or
     // carried to another device, can still hold APPLE_MUSIC on a phone that cannot draw it.
     val lyricsStyle by dataStoreManager.lyricsStyle.collectAsStateWithLifecycle(DataStoreManager.LYRICS_STYLE_CLASSIC)
-    val appleStyle = lyricsStyle == DataStoreManager.LYRICS_STYLE_APPLE_MUSIC && isLyricsBlurSupported()
+    // Enhanced is the same renderer: what makes it Metrolist's style is the motion inside it -
+    // the line growing from its leading edge on their timings, and the spring scroll - which both
+    // styles now carry. Classic stays exactly as it was.
+    val appleStyle =
+        (
+            lyricsStyle == DataStoreManager.LYRICS_STYLE_APPLE_MUSIC ||
+                lyricsStyle == DataStoreManager.LYRICS_STYLE_ENHANCED
+        ) && isLyricsBlurSupported()
 
     // Read here for the same reason the style is: all four call sites want the user's one choice,
     // so threading it through each of them would be four copies of the same lookup. The stored

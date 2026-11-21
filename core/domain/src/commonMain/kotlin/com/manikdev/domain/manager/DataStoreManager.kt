@@ -692,6 +692,14 @@ interface DataStoreManager {
         const val LYRICS_STYLE_CLASSIC = "CLASSIC"
         const val LYRICS_STYLE_APPLE_MUSIC = "APPLE_MUSIC"
 
+        /**
+         * Metrolist's lyrics motion: the sung line grows from its leading edge on their timings,
+         * and the page scrolls on a spring rather than a timed tween. Same renderer as
+         * [LYRICS_STYLE_APPLE_MUSIC] - the difference is the motion, which is what Metrolist's
+         * style is - so it needs the same blur support.
+         */
+        const val LYRICS_STYLE_ENHANCED = "ENHANCED"
+
         const val EQUALIZER_TYPE_BUILT_IN = "BUILT_IN"
         const val EQUALIZER_TYPE_SYSTEM = "SYSTEM"
 
