@@ -54,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -73,7 +72,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
@@ -817,11 +815,7 @@ private fun SoundCloudArtwork(
         } else {
             page?.let { state.artworkQueue.getOrNull(it) }?.thumbnails?.maxByOrNull { it.width * it.height }?.url
         }
-    Box(
-        modifier = modifier.fillMaxSize().onGloballyPositioned { coords ->
-            if (isCurrentPage) actions.onArtworkBounds(coords.boundsInWindow())
-        },
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         var canvasReady by remember(canvas?.url) { mutableStateOf(false) }
         if (canvas != null) {
             MediaPlayerView(

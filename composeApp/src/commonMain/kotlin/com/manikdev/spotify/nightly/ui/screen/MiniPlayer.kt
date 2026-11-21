@@ -89,7 +89,6 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -137,8 +136,6 @@ import com.manikdev.spotify.nightly.ui.icon.VolumeOff
 import com.manikdev.spotify.nightly.ui.icon.VolumeUp
 import com.manikdev.spotify.nightly.ui.screen.player.content.toAudioQualityLabel
 import com.manikdev.spotify.nightly.ui.theme.ArtworkShape
-import com.manikdev.spotify.nightly.ui.playertransition.LocalPlayerDock
-import com.manikdev.spotify.nightly.ui.playertransition.playerDockGestures
 import com.manikdev.spotify.nightly.ui.theme.LocalIsDarkTheme
 import com.manikdev.spotify.nightly.ui.theme.typo
 import com.manikdev.spotify.nightly.viewModel.SharedViewModel
@@ -184,7 +181,6 @@ fun MiniPlayer(
             .collectAsStateWithLifecycle(initialValue = sharedViewModel.timeline.value)
     // The Desktop capsule's quality line between its timestamps — see toAudioQualityLabel.
     val formatState by sharedViewModel.format.collectAsStateWithLifecycle(initialValue = null)
-    val playerDock = LocalPlayerDock.current
 
     val layer = rememberGraphicsLayer()
 
@@ -298,11 +294,35 @@ fun MiniPlayer(
                             .offset { IntOffset(0, offsetY.value.roundToInt()) }
                             .clickable(
                                 onClick = onClick,
-                            ).playerDockGestures(
-                                pull = playerDock?.pullController,
-                                onNext = { sharedViewModel.onUIEvent(UIEvent.Next) },
-                                onPrevious = { sharedViewModel.onUIEvent(UIEvent.Previous) },
-                            ),
+                            ).pointerInput(Unit) {
+                                detectVerticalDragGestures(
+                                    onDragStart = {
+                                    },
+                                    onVerticalDrag = { change: PointerInputChange, dragAmount: Float ->
+                                        if (offsetY.value + dragAmount > 0) {
+                                            coroutineScope.launch {
+                                                change.consume()
+                                                offsetY.animateTo(offsetY.value + 2 * dragAmount)
+                                                Logger.w("MiniPlayer", "Dragged ${offsetY.value}")
+                                            }
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        coroutineScope.launch {
+                                            offsetY.animateTo(0f)
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        Logger.w("MiniPlayer", "Drag Ended")
+                                        coroutineScope.launch {
+                                            if (offsetY.value > 70) {
+                                                onClose()
+                                            }
+                                            offsetY.animateTo(0f)
+                                        }
+                                    },
+                                )
+                            },
                     ),
         ) {
             Box(modifier = Modifier.fillMaxHeight()) {
@@ -318,19 +338,50 @@ fun MiniPlayer(
                             modifier =
                                 Modifier
                                     .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                                   
+                                    .pointerInput(Unit) {
+                                        detectHorizontalDragGestures(
+                                            onDragStart = {
+                                            },
+                                            onHorizontalDrag = {
+                                                change: PointerInputChange,
+                                                dragAmount: Float,
+                                                ->
+                                                coroutineScope.launch {
+                                                    change.consume()
+                                                    offsetX.animateTo(offsetX.value + dragAmount * 2)
+                                                    Logger.w("MiniPlayer", "Dragged ${offsetX.value}")
+                                                }
+                                            },
+                                            onDragCancel = {
+                                                Logger.w("MiniPlayer", "Drag Cancelled")
+                                                coroutineScope.launch {
+                                                    if (offsetX.value > 200) {
+                                                        sharedViewModel.onUIEvent(UIEvent.Previous)
+                                                    } else if (offsetX.value < -120) {
+                                                        sharedViewModel.onUIEvent(UIEvent.Next)
+                                                    }
+                                                    offsetX.animateTo(0f)
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                Logger.w("MiniPlayer", "Drag Ended")
+                                                coroutineScope.launch {
+                                                    if (offsetX.value > 200) {
+                                                        sharedViewModel.onUIEvent(UIEvent.Previous)
+                                                    } else if (offsetX.value < -120) {
+                                                        sharedViewModel.onUIEvent(UIEvent.Next)
+                                                    }
+                                                    offsetX.animateTo(0f)
+                                                }
+                                            },
+                                        )
+                                    },
                         ) {
                             Box(
                                 modifier =
                                     Modifier
                                         .size(40.dp)
-                                        .align(Alignment.CenterVertically)
-                                        .onGloballyPositioned { coords ->
-                                            playerDock?.reportMiniArtwork(coords, 8.dp)
-                                        }
-                                        .graphicsLayer {
-                                            if (playerDock?.hideMiniArtwork == true) alpha = 0f
-                                        },
+                                        .align(Alignment.CenterVertically),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isFlat) {

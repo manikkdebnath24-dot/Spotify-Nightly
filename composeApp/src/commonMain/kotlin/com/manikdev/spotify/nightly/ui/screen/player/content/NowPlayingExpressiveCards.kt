@@ -60,7 +60,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -68,7 +67,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
@@ -349,9 +347,6 @@ internal fun ExpressiveArtworkCardPage(
                         modifier =
                             Modifier
                                 .align(Alignment.Center)
-                                .onGloballyPositioned { coords ->
-                                    actions.onArtworkBounds(coords.boundsInWindow())
-                                }
                                 .then(
                                     if (state.screenData.isVideo) {
                                         Modifier

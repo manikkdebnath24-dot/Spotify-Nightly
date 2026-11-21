@@ -60,7 +60,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -977,10 +976,7 @@ private fun AppleMusicArtworkPage(
                         .align(Alignment.TopCenter)
                         .padding(top = topInset)
                         .fillMaxWidth()
-                        .height(artworkHeight)
-                        .onGloballyPositioned { coords ->
-                            actions.onArtworkBounds(coords.boundsInWindow())
-                        },
+                        .height(artworkHeight),
             ) {
                 AsyncImage(
                     model = coverRequest,

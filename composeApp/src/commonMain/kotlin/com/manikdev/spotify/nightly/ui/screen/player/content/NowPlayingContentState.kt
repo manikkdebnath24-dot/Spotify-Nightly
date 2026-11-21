@@ -8,7 +8,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.geometry.Rect
 import com.manikdev.domain.data.entities.NewFormatEntity
 import com.manikdev.domain.data.model.browse.album.Track
 import com.manikdev.domain.data.model.streams.TimeLine
@@ -164,8 +163,6 @@ class NowPlayingContentActions(
     val onUIEvent: (UIEvent) -> Unit,
     val onSeekToQueueIndex: (Int) -> Unit,
     val onArtworkBitmap: (ImageBitmap) -> Unit,
-    /** Window-space bounds of the current main artwork. Used only by the player transition portal. */
-    val onArtworkBounds: (Rect) -> Unit = {},
     val onSliderChange: (Float) -> Unit,
     val onSliderChangeFinished: () -> Unit,
     val onToggleControls: () -> Unit,

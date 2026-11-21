@@ -96,8 +96,6 @@ import com.manikdev.spotify.nightly.ui.navigation.destination.player.FullscreenD
 import com.manikdev.spotify.nightly.ui.navigation.destination.search.SearchDestination
 import com.manikdev.spotify.nightly.ui.navigation.graph.AppNavigationGraph
 import com.manikdev.spotify.nightly.ui.screen.MiniPlayer
-import com.manikdev.spotify.nightly.ui.playertransition.LocalPlayerDock
-import com.manikdev.spotify.nightly.ui.playertransition.PlayerDock
 import com.manikdev.spotify.nightly.ui.screen.other.UnofficialBuildScreen
 import com.manikdev.spotify.nightly.ui.screen.player.NowPlayingScreen
 import com.manikdev.spotify.nightly.ui.screen.player.NowPlayingScreenContent
@@ -560,9 +558,7 @@ fun App(
         // On Desktop the page is the panel: its colour is painted outside the recorded layer, and
         // colorScheme.background carries the seed's hue, which the glass's saturation boost brings out.
         val backdrop = rememberBackdrop(if (isDesktopShell) desktopPanel else MaterialTheme.colorScheme.background)
-        val playerDock = remember { PlayerDock() }
-        CompositionLocalProvider(LocalPlayerDock provides playerDock) {
-            Scaffold(
+        Scaffold(
             // Watches for userStarted without consuming anything. Dialogs and sheets are windows or
             // layers of their own, so a press inside one (closing the update dialog, say) does not count.
             modifier =
@@ -1145,6 +1141,5 @@ fun App(
                 }
             },
         )
-        }
     }
 }

@@ -96,7 +96,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
@@ -562,10 +561,7 @@ fun NowPlayingContentSpotify(
                                                                 alpha = 0.6f,
                                                             ),
                                                         ambientColor = Color.Transparent,
-                                                    )
-                                                    .onGloballyPositioned { coords ->
-                                                        actions.onArtworkBounds(coords.boundsInWindow())
-                                                    },
+                                                    ),
                                         ) {
                                             AsyncImage(
                                                 model =
