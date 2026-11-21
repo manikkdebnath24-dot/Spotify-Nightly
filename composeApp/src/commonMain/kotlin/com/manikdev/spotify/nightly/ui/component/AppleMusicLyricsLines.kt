@@ -2,6 +2,11 @@ package com.manikdev.spotify.nightly.ui.component
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -207,9 +212,33 @@ fun Modifier.appleMusicLyricFocus(
     val blurRadius by animateDpAsState(targetValue = targetBlur, animationSpec = tween(400), label = "appleMusicLyricBlur")
     val lineAlpha = targetAlpha
 
+    // Metrolist's line motion, ported: the line being sung grows into place from its leading edge
+    // and settles; it leaves the same way. Their timings - in over 400ms decelerating, out over
+    // 320ms accelerating - driven by an Animatable they call `progress`, pivoted on the line's own
+    // edge, which is what makes the words swell from where the singing starts.
+    val isSung = hasActiveLine && distanceFromCurrent == 0
+    val lineProgress = remember { Animatable(if (isSung) 1f else 0f) }
+    LaunchedEffect(isSung) {
+        lineProgress.animateTo(
+            targetValue = if (isSung) 1f else 0f,
+            animationSpec =
+                tween(
+                    durationMillis = if (isSung) 400 else 320,
+                    easing = if (isSung) LinearOutSlowInEasing else FastOutSlowInEasing,
+                ),
+        )
+    }
+
     // alpha BEFORE blur: blurring an already-faded line keeps the two effects independent, whereas
     // fading a blurred layer washes the blur out into a flat smear.
     return this
+        .graphicsLayer {
+            val p = lineProgress.value
+            val grow = 0.97f + 0.03f * p
+            scaleX = grow
+            scaleY = grow
+            transformOrigin = TransformOrigin(0f, 0.5f)
+        }
         .alpha(lineAlpha)
         .then(
             if (blurRadius > 0.dp) {
