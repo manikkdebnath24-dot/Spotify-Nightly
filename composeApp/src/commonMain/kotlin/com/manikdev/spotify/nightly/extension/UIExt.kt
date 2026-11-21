@@ -595,7 +595,12 @@ fun LazyListState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
                         index != previousIndex -> index < previousIndex
                         else -> offset <= previousOffset
                     }
-                val expanded = index == 0 && offset <= collapseAfterPx
+                // Unfold on any upward scroll, fold on a light downward one. The distance rule
+                // alone only ever unfolded at the very top of the page: scroll up from the middle
+                // and the bar stayed folded until you reached the first item. Scrolling up is the
+                // signal, wherever it happens; the distance rule only decides how quickly a
+                // downward scroll folds it away.
+                val expanded = scrollingUp || (index == 0 && offset <= collapseAfterPx)
 
                 // The bottom bar only needs a new value when its visual state changes.
                 // Do not write Compose state on every scroll frame.
