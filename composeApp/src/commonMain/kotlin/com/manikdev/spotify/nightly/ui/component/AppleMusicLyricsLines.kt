@@ -200,8 +200,12 @@ fun Modifier.appleMusicLyricFocus(
             else -> (1f - distance * ALPHA_FALLOFF_PER_LINE).coerceAtLeast(MIN_LINE_ALPHA)
         }
 
+    // Only the blur animates. The alpha used to glide over 400ms alongside it, so a line arrived
+    // faded and brightened into place; that is an animation on top of the blur, and the blur is the
+    // one effect that is supposed to remain. Alpha is applied outright now - the line is at its
+    // final brightness the moment the song reaches it.
     val blurRadius by animateDpAsState(targetValue = targetBlur, animationSpec = tween(400), label = "appleMusicLyricBlur")
-    val lineAlpha by animateFloatAsState(targetValue = targetAlpha, animationSpec = tween(400), label = "appleMusicLyricAlpha")
+    val lineAlpha = targetAlpha
 
     // alpha BEFORE blur: blurring an already-faded line keeps the two effects independent, whereas
     // fading a blurred layer washes the blur out into a flat smear.
