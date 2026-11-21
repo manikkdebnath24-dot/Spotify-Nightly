@@ -577,10 +577,14 @@ fun App(
             containerColor =
                 if (isDesktopShell) desktopWindow else MaterialTheme.colorScheme.background,
             bottomBar = {
-                // The player is a full-screen overlay now, not a Material sheet in its own window,
-                // so the Scaffold's bottom bar would draw straight over it - which is exactly what
-                // the screenshot showed: the mini player and the nav bar sitting on the player.
-                if (!isTablet && !isShowNowPlaylistScreen) {
+                // The bar is composed once and stays composed. It used to be wrapped in
+                // `!isShowNowPlaylistScreen`, so opening the player tore the whole bar - mini
+                // player included - out of the tree and closing it built it again from scratch.
+                // That is the flicker: the bar was not animating, it was being destroyed and
+                // re-created, which also re-ran every image request in it. The player is a
+                // ModalBottomSheet in its own window, so it covers the bar by itself; nothing
+                // needs to remove it.
+                if (!isTablet) {
                     AnimatedVisibility(
                         isNavBarVisible,
                         // A bottom bar comes up from the bottom, not in from the side. The
