@@ -1060,11 +1060,11 @@ fun HomeItemSong(
                     modifier =
                         textWidth
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                initialDelayMillis = 2000,
-                                repeatDelayMillis = 2000,
-                                velocity = 25.dp,
-                            ).padding(vertical = 3.dp),
+                            // No marquee on the video card. basicMarquee runs a never-ending
+                            // animation for every visible card, and a row of 16:9 cards put several
+                            // of them on screen at once - that is the stutter and the glitch you get
+                            // the moment those rows scroll in. The subtitle ellipsises instead.
+                            .padding(vertical = 3.dp),
                 )
             }
         }
