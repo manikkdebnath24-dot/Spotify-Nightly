@@ -164,20 +164,13 @@ fun NowPlayingScreen(
     }
 
     val hideSheet: () -> Unit = {
+        // Hand back at once. This used to run the settle spring (about 350ms), then M3's own hide
+        // (another 300ms), and only then tell the app the player was gone - two animations in
+        // series before anything changed on screen, which is the "back takes ages" you hit. The
+        // screen changes on the same frame now and the sheet animates away over it.
+        onDismiss()
         coroutineScope.launch {
-            // Out on a stiffer spring than in: closing should feel like leaving, not like the
-            // same journey backwards. Only after it has settled does M3 take the sheet away, so
-            // the two animations never overlap and there is nothing to glitch.
-            settle.animateTo(
-                targetValue = 0f,
-                animationSpec =
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = 320f,
-                    ),
-            )
-            sheetState.hide()
-            onDismiss()
+            runCatching { sheetState.hide() }
         }
     }
 
