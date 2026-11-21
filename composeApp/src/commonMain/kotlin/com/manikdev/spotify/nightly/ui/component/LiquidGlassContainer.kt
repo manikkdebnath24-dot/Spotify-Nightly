@@ -121,8 +121,10 @@ fun Modifier.liquidGlass(
     shape: Shape = CircleShape,
     interactive: Boolean = true,
     blurScale: Float = 1f,
-    minScrim: Float = 0.12f,
-    maxScrim: Float = 0.5f,
+    // The floor keeps bright artwork from showing through the bar raw. 0.12 left the icons
+    // sitting on the sleeve itself; 0.42 is the same value the other glass path settled on.
+    minScrim: Float = 0.42f,
+    maxScrim: Float = 0.62f,
 ): Modifier {
     val isDark = LocalIsDarkTheme.current
     val interaction = rememberGlassInteraction()
@@ -262,8 +264,10 @@ fun Modifier.drawInteractiveGlass(
     pressedScale: Float = 1.12f,
     highlight: Highlight = Highlight.Default,
     blurScale: Float = 1f,
-    minScrim: Float = 0.12f,
-    maxScrim: Float = 0.5f,
+    // The floor keeps bright artwork from showing through the bar raw. 0.12 left the icons
+    // sitting on the sleeve itself; 0.42 is the same value the other glass path settled on.
+    minScrim: Float = 0.42f,
+    maxScrim: Float = 0.62f,
 ): Modifier =
     this
         .drawBackdrop(
@@ -284,7 +288,12 @@ fun Modifier.drawInteractiveGlass(
                     // to white on bright backgrounds ("đục trắng"). Darkening is done in onDrawSurface.
                     brightness = 0.05f,
                     contrast = 1f,
-                    saturation = 1.5f,
+                    // No saturation boost. This is the second glass path in the app - the one the
+                    // bottom bar capsule, the search FAB and the mini player draw through - and it
+                    // still carried 1.5x while the other path had already been fixed. That is why
+                    // a red sleeve scrolling under the bar still came out as a glowing orange
+                    // blob in every recording. Glass shows what is behind it; it does not shout it.
+                    saturation = 1f,
                 )
                 blur(
                     (
