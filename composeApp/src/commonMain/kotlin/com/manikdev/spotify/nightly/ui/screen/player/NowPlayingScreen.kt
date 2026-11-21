@@ -34,6 +34,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -59,6 +60,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
@@ -103,6 +106,9 @@ import com.manikdev.spotify.nightly.ui.navigation.destination.home.ListenTogethe
 import com.manikdev.spotify.nightly.ui.navigation.destination.list.ArtistDestination
 import com.manikdev.spotify.nightly.ui.navigation.destination.login.LoginDestination
 import com.manikdev.spotify.nightly.ui.navigation.destination.player.FullscreenDestination
+import com.manikdev.spotify.nightly.ui.playertransition.LocalPlayerDock
+import com.manikdev.spotify.nightly.ui.playertransition.PlayerArtworkPortal
+import com.manikdev.spotify.nightly.ui.playertransition.PlayerTransitionController
 import com.manikdev.spotify.nightly.ui.screen.player.content.NowPlayingContentActions
 import com.manikdev.spotify.nightly.ui.screen.player.content.NowPlayingContentAppleMusic
 import com.manikdev.spotify.nightly.ui.screen.player.content.NowPlayingContentSoundCloud
@@ -143,40 +149,72 @@ fun NowPlayingScreen(
     onDismiss: () -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
+    var allowSheetHide by remember { mutableStateOf(false) }
     val sheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
+            confirmValueChange = { value ->
+                value != SheetValue.Hidden || allowSheetHide
+            },
         )
-    // One value drives the player's arrival and its departure, so open and close are the same
-    // motion played in opposite directions - BitChord's PlayerSheetMotion does the same thing by
-    // holding its sheet open and moving the content itself.
-    val settle = remember { Animatable(0f) }
-    // Finger-following, the way BitChord's sheet does it: the sheet's own offset is read while it
-    // is being dragged, and the content's scale and fade ride that same number. So pulling down
-    // shrinks the player towards the mini bar under your finger instead of the content sitting
-    // still while the sheet slides out from under it.
-    val dragProgress by remember(sheetState) {
-        androidx.compose.runtime.derivedStateOf {
-            runCatching {
-                (sheetState.requireOffset() / 420f).coerceIn(0f, 1f)
-            }.getOrDefault(0f)
+    val playerDock = LocalPlayerDock.current
+    var fullArtworkBounds by remember { mutableStateOf<Rect?>(null) }
+    val transitionController = remember(playerDock, sheetState) {
+        playerDock?.let { dock ->
+            PlayerTransitionController(
+                scope = coroutineScope,
+                dock = dock,
+                shown = { true },
+                setShown = { /* Sheet visibility is owned by App state; close() calls onFinished after the portal lands. */ },
+                sheet = { sheetState },
+            )
+        }
+    }
+
+    DisposableEffect(transitionController) {
+        playerDock?.pullController = transitionController
+        onDispose {
+            if (playerDock?.pullController === transitionController) playerDock.pullController = null
+            playerDock?.transitionActive = false
+            playerDock?.sheetOffsetProvider = null
+        }
+    }
+
+    // Keep the sheet's native movement, but sample its offset in a coroutine rather than exposing
+    // a per-frame progress state to the whole player tree. Only the artwork portal and the
+    // lightweight graphics layer consume that progress.
+    LaunchedEffect(sheetState, playerDock) {
+        val dock = playerDock ?: return@LaunchedEffect
+        snapshotFlow {
+            val travel = dock.sheetTravelPx
+            val offset = runCatching { sheetState.requireOffset() }.getOrNull()
+            if (travel > 0f && offset != null && !offset.isNaN()) {
+                (1f - offset / travel).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+        }.collect { progress ->
+            // A manual close/open owns the scalar. Native M3 owns it only while the sheet itself
+            // is travelling, e.g. first open or a direct downward sheet gesture.
+            if (!dock.transitionActive || transitionController?.manualProgress == 0f) {
+                dock.transitionProgress = progress
+                dock.transitionActive = progress > 0.001f && progress < 0.999f
+            }
         }
     }
 
     val hideSheet: () -> Unit = {
-        coroutineScope.launch {
-            // Out on a stiffer spring than in: closing should feel like leaving, not like the
-            // same journey backwards. Only after it has settled does M3 take the sheet away, so
-            // the two animations never overlap and there is nothing to glitch.
-            settle.animateTo(
-                targetValue = 0f,
-                animationSpec =
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = 320f,
-                    ),
-            )
+        transitionController?.close {
+            allowSheetHide = true
+            coroutineScope.launch {
+                sheetState.hide()
+                allowSheetHide = false
+                onDismiss()
+            }
+        } ?: coroutineScope.launch {
+            allowSheetHide = true
             sheetState.hide()
+            allowSheetHide = false
             onDismiss()
         }
     }
@@ -186,7 +224,7 @@ fun NowPlayingScreen(
             Modifier
                 .fillMaxHeight(),
         onDismissRequest = {
-            onDismiss()
+            hideSheet()
         },
         containerColor = Color.Black,
         dragHandle = {},
@@ -195,39 +233,27 @@ fun NowPlayingScreen(
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         shape = RectangleShape,
     ) {
-        // BitChord's motion, applied to the part we own without tearing out M3's sheet: the
-        // content arrives on a critically damped spring (stiffness 195, no bounce) instead of a
-        // timed ease, so it leaves briskly and then settles rather than stopping dead. Scale,
-        // alpha and lift all ride the same value, which is what keeps it from looking like three
-        // separate animations.
-        LaunchedEffect(Unit) {
-            settle.animateTo(
-                targetValue = 1f,
-                animationSpec =
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = 195f,
-                    ),
-            )
-        }
         androidx.compose.foundation.layout.Box(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .onGloballyPositioned { coords ->
+                        playerDock?.sheetTravelPx = coords.size.height.toFloat()
+                        playerDock?.sheetOffsetProvider = {
+                            runCatching { sheetState.requireOffset() }.getOrDefault(0f)
+                        }
+                    },
         ) {
             androidx.compose.foundation.layout.Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            val t = settle.value * (1f - dragProgress)
-                            alpha = t
-                            // No scale here, on purpose. A graphicsLayer that scales the whole
-                            // player makes Compose rasterise the layer and then stretch it, and
-                            // the artwork comes out soft - which is exactly the quality loss this
-                            // caused. Translation and alpha cost no pixels, so the cover stays
-                            // sharp at every frame of the motion.
-                            translationY = (1f - t) * 120.dp.toPx()
+                            // The sheet is allowed to move natively; only fade the heavy content
+                            // slightly ahead of the artwork portal. This keeps Compose from scaling
+                            // the whole player layer and preserves artwork sharpness.
+                            val t = if (dock.transitionActive) dock.transitionProgress else 1f
+                            alpha = (0.15f + 0.85f * t).coerceIn(0f, 1f)
                         },
             ) {
                 NowPlayingScreenContent(
@@ -235,11 +261,17 @@ fun NowPlayingScreen(
                     navController = navController,
                     isExpanded = sheetState.currentValue == SheetValue.Expanded,
                     dismissIcon = SpotifyIcons.KeyboardArrowDown,
-                    onDismiss = {
-                        hideSheet()
-                    },
+                    onArtworkBounds = { fullArtworkBounds = it },
+                    onDismiss = { hideSheet() },
                 )
             }
+
+            PlayerArtworkPortal(
+                dock = playerDock ?: return@ModalBottomSheet,
+                artwork = sharedViewModel.nowPlayingScreenData.value.bitmap,
+                fullArtworkBounds = fullArtworkBounds,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -252,6 +284,7 @@ fun NowPlayingScreenContent(
     navController: NavController,
     isExpanded: Boolean,
     dismissIcon: ImageVector,
+    onArtworkBounds: (Rect) -> Unit = {},
     onDismiss: () -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -741,6 +774,7 @@ fun NowPlayingScreenContent(
                 mediaPlayerHandler.playMediaItemInMediaSource(index)
             },
             onArtworkBitmap = { sharedViewModel.setBitmap(it) },
+            onArtworkBounds = onArtworkBounds,
             onSliderChange = { newValue ->
                 isSliding = true
                 sliderValue = newValue

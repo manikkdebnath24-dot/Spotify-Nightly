@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
@@ -815,7 +816,11 @@ private fun SoundCloudArtwork(
         } else {
             page?.let { state.artworkQueue.getOrNull(it) }?.thumbnails?.maxByOrNull { it.width * it.height }?.url
         }
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier.fillMaxSize().onGloballyPositioned { coords ->
+            if (isCurrentPage) actions.onArtworkBounds(coords.boundsInWindow())
+        },
+    ) {
         var canvasReady by remember(canvas?.url) { mutableStateOf(false) }
         if (canvas != null) {
             MediaPlayerView(
