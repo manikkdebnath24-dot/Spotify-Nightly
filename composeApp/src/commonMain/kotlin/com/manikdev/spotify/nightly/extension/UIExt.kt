@@ -618,6 +618,7 @@ fun LazyListState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
 
 @Composable
 fun LazyGridState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
+    val collapseAfterPx = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.toPx() }
     LaunchedEffect(this) {
         var previousIndex = firstVisibleItemIndex
         var previousOffset = firstVisibleItemScrollOffset
@@ -629,7 +630,6 @@ fun LazyGridState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
                 // be answered for every reading at index 0, so a grid could not fold near its top.
                 val movingUp =
                     if (index != previousIndex) index < previousIndex else offset < previousOffset
-                val collapseAfterPx = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.toPx() }
                 val expanded = (index == 0 && offset <= collapseAfterPx) || movingUp
 
                 if (lastExpanded != expanded) {
