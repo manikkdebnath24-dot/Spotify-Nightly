@@ -446,6 +446,21 @@ class MainActivity : AppCompatActivity() {
                     preferredDisplayModeId = best.modeId
                     preferredRefreshRate = best.refreshRate
                 }
+            // The two above are a request the OEM is free to ignore, and ColorOS does: the frame
+            // log sat at 53-60fps on a 120Hz panel, which is why every scroll and animation felt
+            // heavy. Window.setFrameRate is the call the platform actually honours. It would not
+            // resolve against this compileSdk, so it is reached by reflection - guarded, and a
+            // no-op on any device that does not have it.
+            runCatching {
+                val method =
+                    window.javaClass.getMethod(
+                        "setFrameRate",
+                        Float::class.javaPrimitiveType,
+                        Int::class.javaPrimitiveType,
+                    )
+                method.invoke(window, best.refreshRate, 0)
+                Logger.w("MainActivity", "setFrameRate: ${best.refreshRate}")
+            }
         }.onFailure { Logger.w("MainActivity", "refresh rate: ${it.message}") }
     }
 
