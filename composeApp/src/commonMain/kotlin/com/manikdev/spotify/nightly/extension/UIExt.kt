@@ -593,18 +593,15 @@ fun LazyListState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
 
         snapshotFlow { firstVisibleItemIndex to firstVisibleItemScrollOffset }
             .collect { (index, offset) ->
-                val scrollingUp =
-                    when {
-                        index == 0 -> true
-                        index != previousIndex -> index < previousIndex
-                        else -> offset <= previousOffset
-                    }
-                // Unfold on any upward scroll, fold on a light downward one. The distance rule
-                // alone only ever unfolded at the very top of the page: scroll up from the middle
-                // and the bar stayed folded until you reached the first item. Scrolling up is the
-                // signal, wherever it happens; the distance rule only decides how quickly a
-                // downward scroll folds it away.
-                val expanded = scrollingUp || (index == 0 && offset <= collapseAfterPx)
+                // Direction from the movement itself, not from the item index. The old code
+                // answered "scrolling up" for ANY reading at index 0, so at the top of every page
+                // the bar was told you were scrolling up whatever your finger did - which is why
+                // folding never worked near the top, on Home or anywhere else.
+                val movingUp =
+                    if (index != previousIndex) index < previousIndex else offset < previousOffset
+                // Open at the very top, and open on any upward movement; fold on downward
+                // movement past the threshold, wherever it happens.
+                val expanded = (index == 0 && offset <= collapseAfterPx) || movingUp
 
                 // The bottom bar only needs a new value when its visual state changes.
                 // Do not write Compose state on every scroll frame.
@@ -628,13 +625,12 @@ fun LazyGridState.observeScrollExpansion(onExpandedChanged: (Boolean) -> Unit) {
 
         snapshotFlow { firstVisibleItemIndex to firstVisibleItemScrollOffset }
             .collect { (index, offset) ->
-                val scrollingUp =
-                    when {
-                        index == 0 -> true
-                        index != previousIndex -> index < previousIndex
-                        else -> offset <= previousOffset
-                    }
-                val expanded = index <= 1 || scrollingUp
+                // Same rule as the list version, and for the same reason: "scrolling up" used to
+                // be answered for every reading at index 0, so a grid could not fold near its top.
+                val movingUp =
+                    if (index != previousIndex) index < previousIndex else offset < previousOffset
+                val collapseAfterPx = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.toPx() }
+                val expanded = (index == 0 && offset <= collapseAfterPx) || movingUp
 
                 if (lastExpanded != expanded) {
                     lastExpanded = expanded

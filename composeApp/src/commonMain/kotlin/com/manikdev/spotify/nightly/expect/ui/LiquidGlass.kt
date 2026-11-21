@@ -100,7 +100,12 @@ fun Modifier.drawBackdropCustomShape(
             // High performance mode halves the recording rate again: a tenth of the frames is
             // still a fresh enough sample behind a blurred surface, and it is the difference
             // between holding 120 and missing it on a mid-range panel.
-            val every = if (PerformanceSettings.highPerformanceMode) 10 else 5
+            // Fewer captures than before (8, or 12 in high-performance mode). A page change is the
+            // worst case for this surface: the whole backdrop changes at once while the bar is
+            // animating its own shape, so every recorded frame is a full-screen capture plus a
+            // blur on top of a transition. A sample two frames older is invisible behind a blurred
+            // capsule; the capture it saves is not.
+            val every = if (PerformanceSettings.highPerformanceMode) 12 else 8
             val drawn = recordCounters[layer] ?: 0
             recordCounters[layer] = drawn + 1
             if (drawn % every == 0) {
