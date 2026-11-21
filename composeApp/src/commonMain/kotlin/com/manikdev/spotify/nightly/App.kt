@@ -2,6 +2,8 @@ package com.manikdev.spotify.nightly
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
@@ -581,8 +583,12 @@ fun App(
                 if (!isTablet && !isShowNowPlaylistScreen) {
                     AnimatedVisibility(
                         isNavBarVisible,
-                        enter = fadeIn() + slideInHorizontally(),
-                        exit = fadeOut(),
+                        // A bottom bar comes up from the bottom, not in from the side. The
+                        // horizontal slide is what made the bar's return after closing the player
+                        // read as a sideways flick rather than the player handing back to the bar.
+                        enter = fadeIn(animationSpec = tween(220)) +
+                            slideInVertically(animationSpec = tween(220)) { it / 2 },
+                        exit = fadeOut(animationSpec = tween(160)),
                     ) {
                         // On Android both materials go through the folding bar, which draws the mini
                         // player itself. Desktop keeps the always-open flat bar under its own one.
