@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
@@ -567,7 +568,10 @@ suspend fun LazyListState.animateScrollAndCentralizeItem(index: Int) {
     val itemCenter = itemInfo.offset + itemInfo.size / 2
     this.animateScrollBy(
         value = (itemCenter - viewportCenter).toFloat(),
-        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+        // A spring, not a timed tween. Metrolist's lyrics scroll on a spring (their LyPlusSpring),
+        // which is what gives the page its settle: it leaves briskly and keeps easing into place
+        // instead of stopping dead at 300ms. 0.85 damping keeps it from bouncing past the line.
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 300f),
     )
 }
 
