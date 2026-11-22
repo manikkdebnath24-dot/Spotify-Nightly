@@ -82,10 +82,24 @@ fun parseRichSyncWords(
         }
     }
 
-    // If no valid words were parsed, return null (fallback to LINE_SYNCED)
+    // No timestamps in this line: estimate them instead of giving up. The words are laid out
+    // evenly across the line's own duration, so every line gets word-by-word movement even when
+    // the lyrics carry only line timing - which is what most songs have. The last word is held
+    // to the line's end, so the line finishes when the song says it does.
     if (wordTimings.isEmpty()) {
-        println("[parseRichSyncWords] No words matched the regex")
-        return null
+        val plain = decodeHtmlEntities(words).trim()
+        if (plain.isBlank()) return null
+        val start = lineStartTimeMs.toLongOrNull() ?: 0L
+        val end = lineEndTimeMs.toLongOrNull()?.takeIf { it > start } ?: (start + 2_500L)
+        val pieces = plain.split(' ').filter { it.isNotBlank() }
+        if (pieces.isEmpty()) return null
+        val span = (end - start).coerceAtLeast(pieces.size * 120L)
+        val step = span / pieces.size
+        val estimated =
+            pieces.mapIndexed { i, piece ->
+                WordTiming(text = piece, startTimeMs = start + step * i)
+            }
+        return ParsedRichSyncLine(words = estimated, lineStartTimeMs = start, lineEndTimeMs = end)
     }
 
     println("[parseRichSyncWords] Successfully parsed ${wordTimings.size} words")
