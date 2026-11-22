@@ -194,7 +194,9 @@ fun NowPlayingScreen(
     // mini player's cover is the only thing that moves.
     LaunchedEffect(enhancedOpen) {
         if (enhancedOpen) {
-            runCatching { sheetState.snapTo(SheetValue.Expanded) }
+            // show() with a zero-length spec: the sheet is placed on its first frame instead of
+            // sliding. snapTo() would be the obvious call but it is internal to SheetState.
+            runCatching { sheetState.show(animationSpec = tween(durationMillis = 0)) }
         }
     }
 
