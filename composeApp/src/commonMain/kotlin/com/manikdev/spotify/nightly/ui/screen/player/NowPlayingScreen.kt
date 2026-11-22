@@ -128,6 +128,13 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.abs
 
+/**
+ * How far the enhanced open has travelled, 0 to 1, as a lambda so reading it inside a
+ * graphicsLayer costs nothing: the artwork scales per frame without recomposing the player.
+ */
+val LocalPlayerOpenGrow = staticCompositionLocalOf<() -> Float> { { 1f } }
+
+
 private const val TAG = "NowPlayingScreen"
 
 // Desktop's fullscreen lyrics page: in a little slower than out, so opening reads as arriving and
@@ -138,12 +145,6 @@ private const val FULLSCREEN_LYRICS_EXIT_MS = 220
 @OptIn(ExperimentalFoundationApi::class)
 @ExperimentalMaterial3Api
 @Composable
-/**
- * How far the enhanced open has travelled, 0 to 1, as a lambda so reading it inside a
- * graphicsLayer costs nothing: the artwork scales per frame without recomposing the player.
- */
-val LocalPlayerOpenGrow = staticCompositionLocalOf<() -> Float> { { 1f } }
-
 fun NowPlayingScreen(
     sharedViewModel: SharedViewModel = koinInject(),
     navController: NavController,
