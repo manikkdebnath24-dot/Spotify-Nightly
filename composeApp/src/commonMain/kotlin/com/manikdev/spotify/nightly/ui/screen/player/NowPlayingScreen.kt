@@ -189,17 +189,6 @@ fun NowPlayingScreen(
     // on the first composition, while the sheet was still sliding up from the bottom of the screen,
     // so most of it happened off screen and the player simply appeared at full size. Keyed on the
     // sheet's value, the growth starts on the frame the player is actually visible.
-    // On Enhanced the sheet is PLACED, not slid. Its own entrance is the "first animation" you kept
-    // seeing before the grow; snapping it into place removes it entirely, so the grow out of the
-    // mini player's cover is the only thing that moves.
-    LaunchedEffect(enhancedOpen) {
-        if (enhancedOpen) {
-            // show() with a zero-length spec: the sheet is placed on its first frame instead of
-            // sliding. snapTo() would be the obvious call but it is internal to SheetState.
-            runCatching { sheetState.show(animationSpec = tween(durationMillis = 0)) }
-        }
-    }
-
     LaunchedEffect(enhancedOpen, sheetState.targetValue, sheetState.currentValue) {
         if (enhancedOpen &&
             (sheetState.targetValue == SheetValue.Expanded || sheetState.currentValue == SheetValue.Expanded)
