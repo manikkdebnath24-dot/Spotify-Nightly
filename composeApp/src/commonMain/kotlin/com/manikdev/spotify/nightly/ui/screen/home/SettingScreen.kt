@@ -610,6 +610,10 @@ fun SettingScreen(
     val customThemeColorHex by sharedViewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
     val nowPlayingStyle by sharedViewModel.getNowPlayingStyle().collectAsStateWithLifecycle(DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY)
     val lyricsStyle by sharedViewModel.getLyricsStyle().collectAsStateWithLifecycle(DataStoreManager.LYRICS_STYLE_CLASSIC)
+    val playerOpenAnimation by
+        sharedViewModel
+            .getPlayerOpenAnimation()
+            .collectAsStateWithLifecycle(DataStoreManager.PLAYER_ANIMATION_DEFAULT)
     val romanizationStored by sharedViewModel.getRomanizationLanguages().collectAsStateWithLifecycle("")
     val japaneseDictionaryState by viewModel.japaneseDictionaryState.collectAsStateWithLifecycle()
     var showColorPickerDialog by rememberSaveable { mutableStateOf(false) }
@@ -893,6 +897,41 @@ fun SettingScreen(
                             },
                         )
                     }
+
+                    // How the full-screen player arrives. Default is the sheet's own slide, which
+                    // is what the app has always done; Enhanced grows the player out of the mini
+                    // player's corner on a spring. Nothing about the artwork changes either way.
+                    val playerAnimationLabels =
+                        listOf(
+                            DataStoreManager.PLAYER_ANIMATION_DEFAULT to "Default",
+                            DataStoreManager.PLAYER_ANIMATION_ENHANCED to "Enhanced",
+                        )
+                    SettingItem(
+                        title = "Player animation",
+                        subtitle = playerAnimationLabels.firstOrNull { it.first == playerOpenAnimation }?.second ?: "",
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = "Player animation",
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                playerAnimationLabels.map {
+                                                    (it.first == playerOpenAnimation) to it.second
+                                                },
+                                        ),
+                                    confirm =
+                                        "Change" to { state ->
+                                            val selected = state.selectOne?.getSelected()
+                                            playerAnimationLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                sharedViewModel.setPlayerOpenAnimation(it)
+                                            }
+                                        },
+                                    dismiss = "Cancel",
+                                ),
+                            )
+                        },
+                    )
 
                     // Independent of BOTH style settings, and not gated on Android 12: this changes
                     // what the words SAY, not how they are drawn, so it applies to every style on

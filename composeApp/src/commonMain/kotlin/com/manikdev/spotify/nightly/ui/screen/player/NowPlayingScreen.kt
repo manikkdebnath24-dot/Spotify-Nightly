@@ -155,7 +155,15 @@ fun NowPlayingScreen(
     val enhancedOpen = playerAnimation == DataStoreManager.PLAYER_ANIMATION_ENHANCED
     val openGrow = remember { Animatable(if (enhancedOpen) 0f else 1f) }
     LaunchedEffect(enhancedOpen) {
-        if (enhancedOpen) openGrow.animateTo(1f, spring(dampingRatio = 0.9f, stiffness = 260f)) else openGrow.snapTo(1f)
+        if (enhancedOpen) {
+            // Back to 0 first. The preference arrives asynchronously, so on the frame the player
+            // opens this can still read Default with the value already at 1 - without the snap the
+            // animateTo(1f) below would have nowhere to travel and the animation would never show.
+            openGrow.snapTo(0f)
+            openGrow.animateTo(1f, spring(dampingRatio = 0.9f, stiffness = 260f))
+        } else {
+            openGrow.snapTo(1f)
+        }
     }
 
     val sheetState =
