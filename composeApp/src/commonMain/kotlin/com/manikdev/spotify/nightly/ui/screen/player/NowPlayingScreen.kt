@@ -132,6 +132,14 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.abs
 
 /**
+ * The chosen player animation, cached at app start. The preference itself arrives asynchronously,
+ * so reading it inside the player meant the FIRST open saw the default and played the old
+ * animation, and only the second open had the real value. This is written once when the app starts
+ * and read synchronously, so every open behaves the same.
+ */
+var playerAnimationEnhanced by mutableStateOf(false)
+
+/**
  * How far the enhanced open has travelled, 0 to 1, as a lambda so reading it inside a
  * graphicsLayer costs nothing: the artwork scales per frame without recomposing the player.
  */
@@ -162,7 +170,12 @@ fun NowPlayingScreen(
         sharedViewModel
             .getPlayerOpenAnimation()
             .collectAsStateWithLifecycle(DataStoreManager.PLAYER_ANIMATION_DEFAULT)
-    val enhancedOpen = playerAnimation == DataStoreManager.PLAYER_ANIMATION_ENHANCED
+    // Keep the cache current, and read the cache for this frame: on the very first open the flow
+    // above has not emitted yet, which is what made the first open animate the old way.
+    LaunchedEffect(playerAnimation) {
+        playerAnimationEnhanced = playerAnimation == DataStoreManager.PLAYER_ANIMATION_ENHANCED
+    }
+    val enhancedOpen = playerAnimationEnhanced
     val openGrow = remember { Animatable(if (enhancedOpen) 0f else 1f) }
     // True only while the player is shrinking away, so the layer can anchor on the mini player's
     // cover (bottom-right) instead of the corner it grew out of.

@@ -144,6 +144,7 @@ import spotify.composeapp.generated.resources.update_available
 import spotify.composeapp.generated.resources.update_message
 import spotify.composeapp.generated.resources.yes
 import kotlin.time.ExperimentalTime
+import com.manikdev.spotify.nightly.ui.screen.player.playerAnimationEnhanced
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalFoundationApi::class)
 @Composable
@@ -180,6 +181,17 @@ fun App(
     val isLiquidGlassEnabled by viewModel.getEnableLiquidGlass().collectAsStateWithLifecycle(DataStoreManager.FALSE)
     // Analytics only makes sense with local tracking on, so its tab follows that setting.
     val isLocalTrackingEnabled by viewModel.getLocalTrackingEnabled().collectAsStateWithLifecycle(DataStoreManager.FALSE)
+    // Read the player-animation choice once, at app start, into the cache the player reads
+    // synchronously. Without this the first open of the session had no value yet and played the
+    // old animation; only the second open knew what you had chosen.
+    val playerAnimationChoice by
+        sharedViewModel
+            .getPlayerOpenAnimation()
+            .collectAsStateWithLifecycle(DataStoreManager.PLAYER_ANIMATION_DEFAULT)
+    LaunchedEffect(playerAnimationChoice) {
+        playerAnimationEnhanced = playerAnimationChoice == DataStoreManager.PLAYER_ANIMATION_ENHANCED
+    }
+
     val showAnalyticsTab = isLocalTrackingEnabled == TRUE
     // Mix for you comes from the signed-in YouTube account, so its tab follows the session — the
     // same condition that used to hide the chip inside Library.
