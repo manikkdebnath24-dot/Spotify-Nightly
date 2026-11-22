@@ -185,7 +185,7 @@ fun App(
     // synchronously. Without this the first open of the session had no value yet and played the
     // old animation; only the second open knew what you had chosen.
     val playerAnimationChoice by
-        sharedViewModel
+        viewModel
             .getPlayerOpenAnimation()
             .collectAsStateWithLifecycle(DataStoreManager.PLAYER_ANIMATION_DEFAULT)
     LaunchedEffect(playerAnimationChoice) {
