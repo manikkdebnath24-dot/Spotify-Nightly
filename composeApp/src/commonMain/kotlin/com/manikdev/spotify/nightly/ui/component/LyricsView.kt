@@ -779,20 +779,54 @@ fun LyricsView(
                                 )
                             }
 
-                            // Line sync or unsynced: use existing LyricsLineItem
+                            // Line sync or unsynced - Classic's own look, but word by word.
+                            //
+                            // This used to be a plain LyricsLineItem, so a song with only line
+                            // timing lit up a whole line at a time and never showed word movement.
+                            // The parser now returns word timings for such a line too - real ones
+                            // where the lyrics carry them, estimated across the line's own duration
+                            // where they do not - so it goes through the same word renderer as the
+                            // rich-synced branch. Every Classic parameter is left alone: no custom
+                            // font size, no glow, Classic's own padding and spacing.
                             else -> {
-                                LyricsLineItem(
-                                    originalWords = words,
-                                    translatedWords = translatedWords,
-                                    romanizedWords = romanizedWords,
-                                    isBold = index <= currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
-                                    isCurrent = index == currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
-                                    modifier =
-                                        Modifier
-                                            .clickable(enabled = lyricsData.lyrics.syncType == "LINE_SYNCED") {
-                                                onLineClick(line.startTimeMs.toFloat() * 100 / timeLine.value.total)
-                                            },
-                                )
+                                val parsedLine =
+                                    remember(words, line.startTimeMs, line.endTimeMs) {
+                                        parseRichSyncWords(words, line.startTimeMs, line.endTimeMs)
+                                    }
+                                if (parsedLine != null) {
+                                    RichSyncLyricsLineItem(
+                                        parsedLine = parsedLine,
+                                        translatedWords = translatedWords,
+                                        romanizedWords = romanizedWords,
+                                        currentTimeMs = current.current - lyricsOffsetMs,
+                                        isCurrent = index == currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
+                                        customFontSize = null,
+                                        glow = null,
+                                        pendingColorOverride = null,
+                                        translatedColorOverride = null,
+                                        translatedStyleOverride = null,
+                                        customPadding = 12.dp,
+                                        wrappedLineSpacing = 0.dp,
+                                        modifier =
+                                            Modifier
+                                                .clickable(enabled = lyricsData.lyrics.syncType == "LINE_SYNCED") {
+                                                    onLineClick(line.startTimeMs.toFloat() * 100 / timeLine.value.total)
+                                                },
+                                    )
+                                } else {
+                                    LyricsLineItem(
+                                        originalWords = words,
+                                        translatedWords = translatedWords,
+                                        romanizedWords = romanizedWords,
+                                        isBold = index <= currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
+                                        isCurrent = index == currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
+                                        modifier =
+                                            Modifier
+                                                .clickable(enabled = lyricsData.lyrics.syncType == "LINE_SYNCED") {
+                                                    onLineClick(line.startTimeMs.toFloat() * 100 / timeLine.value.total)
+                                                },
+                                    )
+                                }
                             }
                         }
                     }
