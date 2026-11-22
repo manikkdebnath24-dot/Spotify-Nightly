@@ -126,8 +126,17 @@ class AndroidUpdateController(
         // version on disk is no longer the newest one.
     }
 
+    private var lastShown: UpdateUiState = UpdateUiState.Idle
+
     override fun dismiss() {
+        lastShown = _state.value
         _state.value = UpdateUiState.Idle
+    }
+
+    override fun show() {
+        // Re-emit what was on screen when it was dismissed. No check, no download: the state the
+        // controller already holds is the state the user is coming back to.
+        if (lastShown !is UpdateUiState.Idle) _state.value = lastShown
     }
 
     // ---------------------------------------------------------------------------------

@@ -87,7 +87,7 @@ fun CreateActions(
     backdrop: PlatformBackdrop,
     navController: NavController,
     onSettings: (() -> Unit)? = null,
-    onOpenUpdate: () -> Unit = {},
+    onOpenUpdate: () -> Unit = { com.manikdev.spotify.nightly.update.updateHostController?.show() },
     sharedViewModel: SharedViewModel = koinInject(),
 ) {
     val room by koinInject<ListenTogetherRepository>().room.collectAsStateWithLifecycle()

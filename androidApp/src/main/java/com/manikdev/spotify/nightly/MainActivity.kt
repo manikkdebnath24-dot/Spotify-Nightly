@@ -156,6 +156,7 @@ class MainActivity : AppCompatActivity() {
         loadKoinModules(viewModelModule)
         VersionManager.initialize()
         updateController = AndroidUpdateController(this, VersionManager.getVersionName())
+        com.manikdev.spotify.nightly.update.updateHostController = updateController
         requestInstallPermission()
         updateController.start()
         // The legacy popup check hits the same GitHub release feed as the updater above. Firing both
@@ -308,6 +309,11 @@ class MainActivity : AppCompatActivity() {
             // The performance readout sits above the app, so it measures what you are looking at.
             androidx.compose.foundation.layout.Box {
                 App(viewModel)
+                // The update sheet, hosted once for the whole app. Until now UpdateHost existed
+                // but nothing called it, so the update popup could never appear.
+                com.manikdev.spotify.nightly.ui.component.UpdateHost(
+                    controller = updateController,
+                )
                 com.manikdev.spotify.nightly.ui.component.PerfOverlay(
                     modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.TopEnd),
                 )

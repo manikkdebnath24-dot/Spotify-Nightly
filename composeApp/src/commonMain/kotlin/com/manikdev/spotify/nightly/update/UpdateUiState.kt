@@ -66,4 +66,17 @@ interface UpdateHostController {
 
     /** Hide the sheet until the next launch. */
     fun dismiss()
+
+    /**
+     * Bring the sheet back after it was dismissed, without another network round trip - the
+     * controller still holds the update it found and the APK it downloaded.
+     */
+    fun show()
 }
+
+/**
+ * The update sheet's controller, published where the UI can reach it. The controller is created in
+ * MainActivity, and the download button lives deep inside Home; threading a reference through every
+ * screen between them would be a dozen signatures for one tap.
+ */
+var updateHostController: UpdateHostController? = null
