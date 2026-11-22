@@ -189,6 +189,15 @@ fun NowPlayingScreen(
     // on the first composition, while the sheet was still sliding up from the bottom of the screen,
     // so most of it happened off screen and the player simply appeared at full size. Keyed on the
     // sheet's value, the growth starts on the frame the player is actually visible.
+    // On Enhanced the sheet is PLACED, not slid. Its own entrance is the "first animation" you kept
+    // seeing before the grow; snapping it into place removes it entirely, so the grow out of the
+    // mini player's cover is the only thing that moves.
+    LaunchedEffect(enhancedOpen) {
+        if (enhancedOpen) {
+            runCatching { sheetState.snapTo(SheetValue.Expanded) }
+        }
+    }
+
     LaunchedEffect(enhancedOpen, sheetState.targetValue, sheetState.currentValue) {
         if (enhancedOpen &&
             (sheetState.targetValue == SheetValue.Expanded || sheetState.currentValue == SheetValue.Expanded)
@@ -197,7 +206,7 @@ fun NowPlayingScreen(
             // opens this can still read Default with the value already at 1 - without the snap the
             // animateTo(1f) below would have nowhere to travel and the animation would never show.
             openGrow.snapTo(0f)
-            openGrow.animateTo(1f, spring(dampingRatio = 0.9f, stiffness = 260f))
+            openGrow.animateTo(1f, spring(dampingRatio = 0.72f, stiffness = 300f))
         } else {
             openGrow.snapTo(1f)
         }
