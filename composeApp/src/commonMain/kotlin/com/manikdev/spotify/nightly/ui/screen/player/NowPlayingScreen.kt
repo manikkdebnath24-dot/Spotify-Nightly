@@ -138,6 +138,12 @@ private const val FULLSCREEN_LYRICS_EXIT_MS = 220
 @OptIn(ExperimentalFoundationApi::class)
 @ExperimentalMaterial3Api
 @Composable
+/**
+ * How far the enhanced open has travelled, 0 to 1, as a lambda so reading it inside a
+ * graphicsLayer costs nothing: the artwork scales per frame without recomposing the player.
+ */
+val LocalPlayerOpenGrow = staticCompositionLocalOf<() -> Float> { { 1f } }
+
 fun NowPlayingScreen(
     sharedViewModel: SharedViewModel = koinInject(),
     navController: NavController,
@@ -236,12 +242,18 @@ fun NowPlayingScreen(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
+                            // Start on the mini player itself: anchored on the bottom-left corner,
+                            // scaled to a thumbnail and shifted down to the bar, then grown into
+                            // place. At 1 nothing of this applies, so the settled player is
+                            // pixel-identical to before.
                             if (enhancedOpen && openGrow.value < 1f) {
                                 val grow = openGrow.value
-                                scaleX = 0.35f + 0.65f * grow
-                                scaleY = 0.35f + 0.65f * grow
-                                transformOrigin = TransformOrigin(0.12f, 0.92f)
-                                alpha = 0.55f + 0.45f * grow
+                                val s2 = 0.16f + 0.84f * grow
+                                scaleX = s2
+                                scaleY = s2
+                                transformOrigin = TransformOrigin(0f, 1f)
+                                translationY = (1f - grow) * 220.dp.toPx()
+                                alpha = 0.25f + 0.75f * grow
                             }
                             val t = settle.value * (1f - dragProgress)
                             alpha = t
@@ -253,6 +265,7 @@ fun NowPlayingScreen(
                             translationY = (1f - t) * 120.dp.toPx()
                         },
             ) {
+                CompositionLocalProvider(LocalPlayerOpenGrow provides { openGrow.value }) {
                 NowPlayingScreenContent(
                     sharedViewModel = sharedViewModel,
                     navController = navController,
@@ -262,6 +275,7 @@ fun NowPlayingScreen(
                         hideSheet()
                     },
                 )
+                }
             }
         }
     }
