@@ -98,6 +98,8 @@ import kotlin.math.exp
 import kotlin.math.sqrt
 import kotlin.math.min
 import kotlin.math.max
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 private const val TAG = "LyricsView"
 
@@ -572,8 +574,24 @@ fun LyricsView(
     // so a new song's first line counts as the next line rather than as a jump.
     val stagger = remember(displayLines) { LyricsStagger() }
 
-    LaunchedEffect(currentLineIndex, lyricsData.lyrics.syncType, appleStyle, stagger) {
-        if (currentLineIndex > -1 &&
+    // Metrolist's scroll ownership, in the form this app can carry it: while your finger is on the
+    // page the list is YOURS and the auto-scroll stands down; once you let go it waits a moment so
+    // you are not yanked away mid-read, then takes the page back and re-centres on the sung line.
+    // Their LyricsScrollAnimation.kt is what this is modelled on.
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+    var autoFollow by remember { mutableStateOf(true) }
+    LaunchedEffect(isDragged) {
+        if (isDragged) {
+            autoFollow = false
+        } else {
+            kotlinx.coroutines.delay(1_200)
+            autoFollow = true
+        }
+    }
+
+    LaunchedEffect(currentLineIndex, lyricsData.lyrics.syncType, appleStyle, stagger, autoFollow) {
+        if (autoFollow &&
+            currentLineIndex > -1 &&
             (lyricsData.lyrics.syncType == "LINE_SYNCED" || lyricsData.lyrics.syncType == "RICH_SYNCED")
         ) {
             if (appleStyle) {
