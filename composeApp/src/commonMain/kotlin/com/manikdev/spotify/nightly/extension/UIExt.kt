@@ -11,6 +11,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
@@ -538,7 +539,15 @@ suspend fun LazyListState.animateScrollAndAnchorItemTop(
         // rows can read the same clock and run the same curve a little behind it.
         var scrolled = 0f
         scroll {
-            val clock = tween<Float>(spanMs.toInt(), easing = LinearEasing)
+            // A decelerating curve, not a straight line. LinearEasing moved the page at a
+            // constant speed and stopped dead at the end, which is what read as mechanical - the
+            // page was being driven, not settling. This starts briskly and eases into place, and
+            // because the rows still read the same clock they stay in step with it.
+            val clock =
+                tween<Float>(
+                    spanMs.toInt(),
+                    easing = CubicBezierEasing(0.22f, 0.61f, 0.36f, 1f),
+                )
             animate(0f, spanMs, animationSpec = clock) { ms, _ ->
                 stagger.elapsedMs = ms
                 scrolled += scrollBy(distance * stagger.progress(ms) - scrolled)
