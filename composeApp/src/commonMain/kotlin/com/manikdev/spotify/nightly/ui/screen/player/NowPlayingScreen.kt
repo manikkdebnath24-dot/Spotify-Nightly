@@ -189,8 +189,10 @@ fun NowPlayingScreen(
     // on the first composition, while the sheet was still sliding up from the bottom of the screen,
     // so most of it happened off screen and the player simply appeared at full size. Keyed on the
     // sheet's value, the growth starts on the frame the player is actually visible.
-    LaunchedEffect(enhancedOpen, sheetState.currentValue) {
-        if (enhancedOpen && sheetState.currentValue == SheetValue.Expanded) {
+    LaunchedEffect(enhancedOpen, sheetState.targetValue, sheetState.currentValue) {
+        if (enhancedOpen &&
+            (sheetState.targetValue == SheetValue.Expanded || sheetState.currentValue == SheetValue.Expanded)
+        ) {
             // Back to 0 first. The preference arrives asynchronously, so on the frame the player
             // opens this can still read Default with the value already at 1 - without the snap the
             // animateTo(1f) below would have nowhere to travel and the animation would never show.
@@ -301,7 +303,13 @@ fun NowPlayingScreen(
                                 // the mini player's own cover, which sits at the other end.
                                 transformOrigin = if (closing) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
                                 translationY = (1f - grow) * 220.dp.toPx()
-                                alpha = 0.25f + 0.75f * grow
+                                // Fully transparent at 0. This is the fix for the double
+                                // animation: the sheet's own slide used to bring the whole player
+                                // up at full size, and only then did the grow run - two openings
+                                // one after the other. While the sheet is still travelling the
+                                // content is invisible, so the slide is just a dark panel arriving
+                                // and the only animation you see is the cover growing.
+                                alpha = grow
                             }
                             val t = settle.value * (1f - dragProgress)
                             alpha = t
