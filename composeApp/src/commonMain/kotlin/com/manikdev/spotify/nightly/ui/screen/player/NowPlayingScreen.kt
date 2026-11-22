@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.animation.core.keyframes
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -163,6 +164,9 @@ fun NowPlayingScreen(
             .collectAsStateWithLifecycle(DataStoreManager.PLAYER_ANIMATION_DEFAULT)
     val enhancedOpen = playerAnimation == DataStoreManager.PLAYER_ANIMATION_ENHANCED
     val openGrow = remember { Animatable(if (enhancedOpen) 0f else 1f) }
+    // True only while the player is shrinking away, so the layer can anchor on the mini player's
+    // cover (bottom-right) instead of the corner it grew out of.
+    var closing by remember { mutableStateOf(false) }
     LaunchedEffect(enhancedOpen) {
         if (enhancedOpen) {
             // Back to 0 first. The preference arrives asynchronously, so on the frame the player
@@ -202,12 +206,22 @@ fun NowPlayingScreen(
         // you hit. One short shrink, then the hand-back, and nothing after it.
         if (enhancedOpen) {
             coroutineScope.launch {
+                closing = true
+                // Out with a pop: it swells a touch as it leaves the eye, then collapses into the
+                // cover - the same shape Metrolist gives its lines when they close.
                 openGrow.animateTo(
                     targetValue = 0f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                    animationSpec =
+                        keyframes {
+                            durationMillis = 260
+                            1f at 0
+                            1.12f at 70
+                            0f at 260
+                        },
                 )
                 onDismiss()
                 runCatching { sheetState.hide() }
+                closing = false
             }
         } else {
             onDismiss()
@@ -265,7 +279,9 @@ fun NowPlayingScreen(
                                 val s2 = 0.16f + 0.84f * grow
                                 scaleX = s2
                                 scaleY = s2
-                                transformOrigin = TransformOrigin(0f, 1f)
+                                // Opening grows from the bar's left corner; closing shrinks into
+                                // the mini player's own cover, which sits at the other end.
+                                transformOrigin = if (closing) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
                                 translationY = (1f - grow) * 220.dp.toPx()
                                 alpha = 0.25f + 0.75f * grow
                             }
