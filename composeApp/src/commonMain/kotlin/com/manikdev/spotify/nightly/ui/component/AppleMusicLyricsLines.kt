@@ -232,6 +232,19 @@ fun Modifier.appleMusicLyricFocus(
     // 320ms accelerating - driven by an Animatable they call `progress`, pivoted on the line's own
     // edge, which is what makes the words swell from where the singing starts.
     val isSung = hasActiveLine && distanceFromCurrent == 0
+
+    // Metrolist's entry: each line fades in as it arrives, over 400ms on a decelerating curve -
+    // their in-duration from Lines.kt, where it sits between 300 and 450ms and is animated
+    // separately from the scale. Lines that are already on screen when the sheet opens start at
+    // full brightness, so nothing flickers on the way in.
+    val enterAlpha = remember { Animatable(if (enhancedLyricsStyle) 0f else 1f) }
+    LaunchedEffect(Unit) {
+        if (enhancedLyricsStyle) {
+            enterAlpha.animateTo(1f, tween(durationMillis = 400, easing = LinearOutSlowInEasing))
+        } else {
+            enterAlpha.snapTo(1f)
+        }
+    }
     val lineProgress = remember { Animatable(if (isSung) 1f else 0f) }
     LaunchedEffect(isSung) {
         lineProgress.animateTo(
@@ -248,6 +261,7 @@ fun Modifier.appleMusicLyricFocus(
     // fading a blurred layer washes the blur out into a flat smear.
     return this
         .graphicsLayer {
+            if (enhancedLyricsStyle) alpha = enterAlpha.value
             val p = lineProgress.value
             val grow = 0.97f + 0.03f * p
             scaleX = grow
