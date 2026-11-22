@@ -224,12 +224,16 @@ fun Modifier.appleMusicLyricFocus(
     // faded and brightened into place; that is an animation on top of the blur, and the blur is the
     // one effect that is supposed to remain. Alpha is applied outright now - the line is at its
     // final brightness the moment the song reaches it.
-    // The blur is applied outright, not animated. A blur radius is the most expensive thing on this
-    // screen - every frame the radius moves, the layer is re-rendered - and ten visible lines were
-    // each re-blurring for 400ms every time the sung line changed. That is the stutter: the page
-    // was being asked to re-render ten blurred layers per frame while it scrolled. The radius now
-    // changes once, on the frame the focus moves, and stays put until it moves again.
-    val blurRadius = targetBlur
+    // The blur stays, and it moves - but only on the lines whose focus is actually changing.
+    //
+    // A blur radius is the most expensive thing on this screen: every frame the radius moves, the
+    // layer is re-rendered. Ten visible lines were each animating for 400ms whenever the sung line
+    // changed, so the page was re-rendering ten blurred layers per frame while it scrolled. Only the
+    // two lines around the sung line now animate; everything further away takes its final radius
+    // outright, which nobody can see because it is already deep in the blur.
+    val animatedBlur by animateDpAsState(targetValue = targetBlur, animationSpec = tween(220), label = "appleMusicLyricBlur")
+    val blurRadius =
+        if (blurEnabled && distanceFromCurrent in -1..1) animatedBlur else targetBlur
     val lineAlpha = targetAlpha
 
     // Metrolist's line motion, ported: the line being sung grows into place from its leading edge
