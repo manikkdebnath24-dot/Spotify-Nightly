@@ -100,18 +100,6 @@ class AndroidUpdateController(
         }
     }
 
-    /** 1 if [a] is newer than [b], 0 if equal, -1 if older. Dotted numeric versions only. */
-    private fun compareUpdateVersions(a: String, b: String): Int {
-        val left = a.trim().split('.').map { it.toIntOrNull() ?: 0 }
-        val right = b.trim().split('.').map { it.toIntOrNull() ?: 0 }
-        val size = maxOf(left.size, right.size)
-        for (i in 0 until size) {
-            val l = left.getOrElse(i) { 0 }
-            val r = right.getOrElse(i) { 0 }
-            if (l != r) return if (l > r) 1 else -1
-        }
-        return 0
-    }
 
     override fun check() {
         scope.launch { refresh() }
