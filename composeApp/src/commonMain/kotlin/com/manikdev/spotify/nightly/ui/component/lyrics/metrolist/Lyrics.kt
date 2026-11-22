@@ -199,37 +199,6 @@ enum class LyricsTimingKind {
     WORD_SYNCED,
 }
 
-data class LyricsProviderResult(
-    val provider: LyricsProvider,
-    val providerName: String,
-    val lyrics: String,
-    val timingKind: LyricsTimingKind,
-    val song: MlxSong = MlxSong(),
-    val preview: String = "",
-)
-
-val LyricsProvider.supportedTimingKinds: Set<LyricsTimingKind>
-    get() =
-        when (this) {
-            LyricsProvider.AUTO -> {
-                emptySet()
-            }
-
-            LyricsProvider.KUGOU -> {
-                setOf(LyricsTimingKind.LINE_SYNCED)
-            }
-
-            LyricsProvider.LRCLIB, LyricsProvider.YOUTUBE -> {
-                setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.UNSYNCED)
-            }
-
-            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.UNISON -> {
-                setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED, LyricsTimingKind.UNSYNCED)
-            }
-
-            LyricsProvider.BETTERLYRICS, LyricsProvider.LRCRED, LyricsProvider.PAXSENIX,
-            LyricsProvider.YOUTUBESUBTITLE, LyricsProvider.SIMPMUSIC,
-            -> {
-                setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED)
-            }
-        }
+// Everything from their LyricsProviderResult down depends on LyricsProvider and MlxSong, which live
+// in their Models.kt - a file with a dozen unrelated song types. None of it is used by the lyrics
+// renderer, so it is left out rather than dragging their whole model graph in behind it.
