@@ -87,6 +87,7 @@ import com.manikdev.spotify.nightly.extension.parseRichSyncWords
 import com.manikdev.spotify.nightly.ui.theme.typo
 import com.manikdev.spotify.nightly.viewModel.NowPlayingScreenData
 import com.manikdev.spotify.nightly.viewModel.SharedViewModel
+import com.manikdev.spotify.nightly.ui.component.lyrics.MetrolistIntervalIndicator
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -469,6 +470,8 @@ fun LyricsView(
             lyricsStyle == DataStoreManager.LYRICS_STYLE_APPLE_MUSIC ||
                 lyricsStyle == DataStoreManager.LYRICS_STYLE_ENHANCED
         ) && isLyricsBlurSupported()
+    // Metrolist's own additions ride on Enhanced only, so Default and Apple Music are untouched.
+    val enhancedStyle = lyricsStyle == DataStoreManager.LYRICS_STYLE_ENHANCED
 
     // Read here for the same reason the style is: all four call sites want the user's one choice,
     // so threading it through each of them would be four copies of the same lookup. The stored
@@ -597,6 +600,26 @@ fun LyricsView(
         ) {
             items(displayLines.lines.size) { index ->
                 val line = displayLines.lines.getOrNull(index)
+
+                // Metrolist's interval indicator: in a silence longer than a moment, the marker
+                // appears above the coming line and fills as the song crosses the gap. Enhanced
+                // only - every other style draws exactly what it drew before.
+                if (enhancedStyle && index > 0) {
+                    val previousEnd = displayLines.lines.getOrNull(index - 1)?.endTimeMs?.toLongOrNull()
+                    val nextStart = line?.startTimeMs?.toLongOrNull()
+                    if (previousEnd != null && nextStart != null && nextStart - previousEnd >= 1_500L) {
+                        val position = current.current - lyricsOffsetMs
+                        if (position in previousEnd..nextStart) {
+                            MetrolistIntervalIndicator(
+                                gapStartMs = previousEnd,
+                                gapEndMs = nextStart,
+                                currentPositionMs = { current.current - lyricsOffsetMs },
+                                visible = true,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
                 // A dots line stands for silence, so it has nothing to translate or romanize. Worth
                 // saying out loud for the translation: that map matches by TIME, and the silence
                 // begins close enough to the line before it that it would otherwise pick up that
