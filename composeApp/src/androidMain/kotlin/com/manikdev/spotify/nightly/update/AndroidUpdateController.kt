@@ -92,7 +92,7 @@ class AndroidUpdateController(
         runCatching {
             val pendingVersion = prefs.getString(KEY_VERSION, null) ?: return@runCatching
             val path = prefs.getString(KEY_PATH, null) ?: return@runCatching
-            if (compareVersions(pendingVersion, currentVersion) <= 0) {
+            if (compareUpdateVersions(pendingVersion, currentVersion) <= 0) {
                 val file = File(path)
                 if (file.exists()) file.delete()
                 clearPending()
@@ -101,7 +101,7 @@ class AndroidUpdateController(
     }
 
     /** 1 if [a] is newer than [b], 0 if equal, -1 if older. Dotted numeric versions only. */
-    private fun compareVersions(a: String, b: String): Int {
+    private fun compareUpdateVersions(a: String, b: String): Int {
         val left = a.trim().split('.').map { it.toIntOrNull() ?: 0 }
         val right = b.trim().split('.').map { it.toIntOrNull() ?: 0 }
         val size = maxOf(left.size, right.size)
@@ -193,12 +193,12 @@ class AndroidUpdateController(
             val file = File(pendingPath)
             // Already installed? Then the stored APK is dead weight and the sheet must not
             // reappear on every launch just because the file survived the install.
-            if (compareVersions(appVersion, pendingVersion) >= 0) {
+            if (compareUpdateVersions(appVersion, pendingVersion) >= 0) {
                 runCatching { file.delete() }
                 clearPending()
             } else if (!file.exists()) {
                 clearPending()
-            } else if (latest == null || compareVersions(pendingVersion, latest.versionName) >= 0) {
+            } else if (latest == null || compareUpdateVersions(pendingVersion, latest.versionName) >= 0) {
                 // Still the newest thing we know about: offer Install, never Download.
                 _state.value =
                     UpdateUiState.ReadyToInstall(
@@ -219,7 +219,7 @@ class AndroidUpdateController(
             if (_state.value is UpdateUiState.Checking) _state.value = UpdateUiState.Idle
             return
         }
-        if (compareVersions(appVersion, latest.versionName) >= 0) {
+        if (compareUpdateVersions(appVersion, latest.versionName) >= 0) {
             cleanOldApks(keep = null)
             if (_state.value is UpdateUiState.Checking) _state.value = UpdateUiState.Idle
             return
@@ -370,7 +370,7 @@ class AndroidUpdateController(
     }
 
     /** Dotted versions compared number by number, so 2.10.0 sorts above 2.9.0. */
-    private fun compareVersions(
+    private fun compareUpdateVersions(
         a: String,
         b: String,
     ): Int {
