@@ -167,6 +167,11 @@ fun NowPlayingScreen(
     // True only while the player is shrinking away, so the layer can anchor on the mini player's
     // cover (bottom-right) instead of the corner it grew out of.
     var closing by remember { mutableStateOf(false) }
+    val sheetState =
+        rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+        )
+
     // Wait for the sheet to SETTLE before growing. This is why the growth was invisible: it started
     // on the first composition, while the sheet was still sliding up from the bottom of the screen,
     // so most of it happened off screen and the player simply appeared at full size. Keyed on the
@@ -183,10 +188,6 @@ fun NowPlayingScreen(
         }
     }
 
-    val sheetState =
-        rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-        )
     // One value drives the player's arrival and its departure, so open and close are the same
     // motion played in opposite directions - BitChord's PlayerSheetMotion does the same thing by
     // holding its sheet open and moving the content itself.
