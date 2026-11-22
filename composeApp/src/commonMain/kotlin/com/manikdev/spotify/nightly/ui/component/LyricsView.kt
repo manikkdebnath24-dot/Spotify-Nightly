@@ -473,6 +473,8 @@ fun LyricsView(
         ) && isLyricsBlurSupported()
     // Metrolist's own additions ride on Enhanced only, so Default and Apple Music are untouched.
     val enhancedStyle = lyricsStyle == DataStoreManager.LYRICS_STYLE_ENHANCED
+    // Tell the line renderer which dimming to use.
+    enhancedLyricsStyle = enhancedStyle
 
     // Read here for the same reason the style is: all four call sites want the user's one choice,
     // so threading it through each of them would be four copies of the same lookup. The stored

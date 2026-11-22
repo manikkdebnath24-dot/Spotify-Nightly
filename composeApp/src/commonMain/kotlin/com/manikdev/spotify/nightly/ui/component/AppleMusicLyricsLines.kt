@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -31,6 +34,13 @@ import com.manikdev.spotify.nightly.Platform
 import com.manikdev.spotify.nightly.getPlatform
 import com.manikdev.spotify.nightly.ui.theme.typo
 import kotlin.math.abs
+
+/**
+ * True while the Enhanced (Metrolist) style is drawing the lyrics. A plain observable value rather
+ * than a composition local: the lyrics view sets it once where it already decides the style, and
+ * the line renderer reads it, so no call site has to be re-plumbed.
+ */
+var enhancedLyricsStyle by mutableStateOf(false)
 
 /**
  * Apple Music renders EVERY lyric line at the same size — what separates the line being sung from
@@ -204,6 +214,9 @@ fun Modifier.appleMusicLyricFocus(
             // order, the whole sheet would take the sung line's full opacity during an intro.
             !hasActiveLine -> PRE_ROLL_LINE_ALPHA
             distanceFromCurrent == 0 -> ACTIVE_LINE_ALPHA
+            // Metrolist dims every line that is not being sung to 0.35 of full, flat - their
+            // value from Lines.kt - rather than fading with distance. Enhanced takes theirs.
+            enhancedLyricsStyle -> 0.35f
             else -> (1f - distance * ALPHA_FALLOFF_PER_LINE).coerceAtLeast(MIN_LINE_ALPHA)
         }
 
