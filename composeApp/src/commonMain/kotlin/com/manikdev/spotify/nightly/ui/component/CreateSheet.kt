@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +87,7 @@ fun CreateActions(
     backdrop: PlatformBackdrop,
     navController: NavController,
     onSettings: (() -> Unit)? = null,
+    onOpenUpdate: () -> Unit = {},
     sharedViewModel: SharedViewModel = koinInject(),
 ) {
     val room by koinInject<ListenTogetherRepository>().room.collectAsStateWithLifecycle()
@@ -117,6 +119,46 @@ fun CreateActions(
             if (room.inRoom) LiveRoomDot()
         }
     }
+    // While an update APK is downloading, a progress button appears beside the plus - same place,
+    // same size, glass when glass is on. Tapping it reopens the update sheet, so a download started
+    // and then dismissed is still reachable.
+    val downloadProgress by sharedViewModel.downloadFileProgress.collectAsStateWithLifecycle()
+    val updateDownloading =
+        !downloadProgress.isDone &&
+            !downloadProgress.isError &&
+            (
+                downloadProgress.audioDownloadProgress > 0f ||
+                    downloadProgress.videoDownloadProgress > 0f ||
+                    downloadProgress.isMerging
+            )
+    val downloadPercent =
+        ((downloadProgress.audioDownloadProgress.coerceIn(0f, 1f)) * 100).toInt()
+
+    val downloadButton: @Composable () -> Unit = {
+        if (updateDownloading) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(44.dp)
+                        .clickable { onOpenUpdate() },
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    progress = { downloadProgress.audioDownloadProgress.coerceIn(0f, 1f) },
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.5.dp,
+                    color = tint,
+                    trackColor = tint.copy(alpha = 0.25f),
+                )
+                Text(
+                    text = "$downloadPercent",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tint,
+                )
+            }
+        }
+    }
+
     val settingsButton: @Composable () -> Unit = {
         if (onSettings != null) {
             IconButton(onClick = onSettings, modifier = Modifier.size(44.dp)) {
@@ -140,11 +182,13 @@ fun CreateActions(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             createButton()
+            downloadButton()
             settingsButton()
         }
     } else {
         Row(verticalAlignment = Alignment.CenterVertically) {
             createButton()
+            downloadButton()
             settingsButton()
         }
     }
