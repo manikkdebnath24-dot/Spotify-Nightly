@@ -167,8 +167,12 @@ fun NowPlayingScreen(
     // True only while the player is shrinking away, so the layer can anchor on the mini player's
     // cover (bottom-right) instead of the corner it grew out of.
     var closing by remember { mutableStateOf(false) }
-    LaunchedEffect(enhancedOpen) {
-        if (enhancedOpen) {
+    // Wait for the sheet to SETTLE before growing. This is why the growth was invisible: it started
+    // on the first composition, while the sheet was still sliding up from the bottom of the screen,
+    // so most of it happened off screen and the player simply appeared at full size. Keyed on the
+    // sheet's value, the growth starts on the frame the player is actually visible.
+    LaunchedEffect(enhancedOpen, sheetState.currentValue) {
+        if (enhancedOpen && sheetState.currentValue == SheetValue.Expanded) {
             // Back to 0 first. The preference arrives asynchronously, so on the frame the player
             // opens this can still read Default with the value already at 1 - without the snap the
             // animateTo(1f) below would have nowhere to travel and the animation would never show.
