@@ -71,7 +71,46 @@ class AndroidUpdateController(
 
     /** Called once per process start: resumes a pending install or looks for a new release. */
     fun start() {
-        scope.launch { refresh() }
+        // Clean up first: an APK that belongs to the version now running has done its job, and the
+        // file has no business sitting in storage afterwards.
+        scope.launch {
+            cleanupInstalledApk()
+            refresh()
+        }
+    }
+
+    /**
+     * Deletes a stored update APK once its version is no longer newer than the one running.
+     *
+     * The controller already deletes an APK when a NEWER release appears, so it never accumulates
+     * installers it has moved past. What it did not do was remove the file after the update was
+     * actually installed - so every install left a 30MB APK behind. This runs on every launch: if
+     * the pending version is the version now running (or older), the file is deleted and the
+     * pending record cleared.
+     */
+    private suspend fun cleanupInstalledApk() {
+        runCatching {
+            val pendingVersion = prefs.getString(KEY_VERSION, null) ?: return@runCatching
+            val path = prefs.getString(KEY_PATH, null) ?: return@runCatching
+            if (compareVersions(pendingVersion, currentVersion) <= 0) {
+                val file = File(path)
+                if (file.exists()) file.delete()
+                clearPending()
+            }
+        }
+    }
+
+    /** 1 if [a] is newer than [b], 0 if equal, -1 if older. Dotted numeric versions only. */
+    private fun compareVersions(a: String, b: String): Int {
+        val left = a.trim().split('.').map { it.toIntOrNull() ?: 0 }
+        val right = b.trim().split('.').map { it.toIntOrNull() ?: 0 }
+        val size = maxOf(left.size, right.size)
+        for (i in 0 until size) {
+            val l = left.getOrElse(i) { 0 }
+            val r = right.getOrElse(i) { 0 }
+            if (l != r) return if (l > r) 1 else -1
+        }
+        return 0
     }
 
     override fun check() {
