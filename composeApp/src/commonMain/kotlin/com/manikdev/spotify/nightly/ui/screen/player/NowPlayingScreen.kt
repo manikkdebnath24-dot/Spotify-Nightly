@@ -196,13 +196,24 @@ fun NowPlayingScreen(
     }
 
     val hideSheet: () -> Unit = {
-        // Hand back at once. This used to run the settle spring (about 350ms), then M3's own hide
-        // (another 300ms), and only then tell the app the player was gone - two animations in
-        // series before anything changed on screen, which is the "back takes ages" you hit. The
-        // screen changes on the same frame now and the sheet animates away over it.
-        onDismiss()
-        coroutineScope.launch {
-            runCatching { sheetState.hide() }
+        // Closing is the opening backwards: on Enhanced the player shrinks back down into the mini
+        // player's cover before the page is handed back. Kept to 180ms on purpose - the old close
+        // ran a 350ms spring and then a 300ms sheet hide in series, which is the "back takes ages"
+        // you hit. One short shrink, then the hand-back, and nothing after it.
+        if (enhancedOpen) {
+            coroutineScope.launch {
+                openGrow.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                )
+                onDismiss()
+                runCatching { sheetState.hide() }
+            }
+        } else {
+            onDismiss()
+            coroutineScope.launch {
+                runCatching { sheetState.hide() }
+            }
         }
     }
 
