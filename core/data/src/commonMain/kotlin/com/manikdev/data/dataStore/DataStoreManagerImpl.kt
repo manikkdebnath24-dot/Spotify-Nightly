@@ -1035,6 +1035,19 @@ internal class DataStoreManagerImpl(
             preferences[LYRICS_STYLE] ?: DataStoreManager.LYRICS_STYLE_CLASSIC
         }
 
+    override val playerOpenAnimation =
+        settingsDataStore.data.map { preferences ->
+            preferences[PLAYER_OPEN_ANIMATION] ?: DataStoreManager.PLAYER_ANIMATION_DEFAULT
+        }
+
+    override suspend fun setPlayerOpenAnimation(animation: String) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[PLAYER_OPEN_ANIMATION] = animation
+            }
+        }
+    }
+
     override suspend fun setLyricsStyle(style: String) {
         withContext(Dispatchers.IO) {
             settingsDataStore.edit { settings ->
@@ -1974,6 +1987,7 @@ internal class DataStoreManagerImpl(
         val CUSTOM_THEME_COLOR = stringPreferencesKey("custom_theme_color")
         val NOW_PLAYING_STYLE = stringPreferencesKey("now_playing_style")
         val LYRICS_STYLE = stringPreferencesKey("lyrics_style")
+        val PLAYER_OPEN_ANIMATION = stringPreferencesKey("player_open_animation")
         val ROMANIZATION_LANGUAGES = stringPreferencesKey("romanization_languages")
         val LYRICS_OFFSET_MS = intPreferencesKey("lyrics_offset_ms")
         val USING_PROXY = stringPreferencesKey("using_proxy")

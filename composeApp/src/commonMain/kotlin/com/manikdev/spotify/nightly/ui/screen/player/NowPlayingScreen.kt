@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -143,6 +144,20 @@ fun NowPlayingScreen(
     onDismiss: () -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
+    // Enhanced open: the player grows out of the mini player's corner and settles. It is the
+    // player's OWN content that scales - no copy is drawn over the top and nothing leaves this
+    // window - so the artwork, its size and its request are untouched either way. Default leaves
+    // this at 1 from the first frame, which is the sheet's slide exactly as it was.
+    val playerAnimation by
+        sharedViewModel
+            .getPlayerOpenAnimation()
+            .collectAsStateWithLifecycle(DataStoreManager.PLAYER_ANIMATION_DEFAULT)
+    val enhancedOpen = playerAnimation == DataStoreManager.PLAYER_ANIMATION_ENHANCED
+    val openGrow = remember { Animatable(if (enhancedOpen) 0f else 1f) }
+    LaunchedEffect(enhancedOpen) {
+        if (enhancedOpen) openGrow.animateTo(1f, spring(dampingRatio = 0.9f, stiffness = 260f)) else openGrow.snapTo(1f)
+    }
+
     val sheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
@@ -213,6 +228,13 @@ fun NowPlayingScreen(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
+                            if (enhancedOpen && openGrow.value < 1f) {
+                                val grow = openGrow.value
+                                scaleX = 0.35f + 0.65f * grow
+                                scaleY = 0.35f + 0.65f * grow
+                                transformOrigin = TransformOrigin(0.12f, 0.92f)
+                                alpha = 0.55f + 0.45f * grow
+                            }
                             val t = settle.value * (1f - dragProgress)
                             alpha = t
                             // No scale here, on purpose. A graphicsLayer that scales the whole

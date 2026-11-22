@@ -565,6 +565,16 @@ interface DataStoreManager {
     suspend fun setLyricsStyle(style: String)
 
     /**
+     * Which open/close animation the full-screen player uses. [PLAYER_ANIMATION_DEFAULT] is the
+     * sheet's own slide, exactly as it has always been; [PLAYER_ANIMATION_ENHANCED] grows the
+     * player out of the mini player's cover and shrinks it back into it. Nothing about the player's
+     * artwork changes either way - only how it arrives.
+     */
+    val playerOpenAnimation: Flow<String>
+
+    suspend fun setPlayerOpenAnimation(animation: String)
+
+    /**
      * Which languages get a Latin-script reading shown for their lyrics, as a comma-separated list
      * of [org.spotify.lyrics.romanization.RomanizationLanguage] NAMES — empty string means the
      * feature is off, which is the default.
@@ -688,6 +698,9 @@ interface DataStoreManager {
         const val NOW_PLAYING_STYLE_M3_EXPRESSIVE = "M3_EXPRESSIVE"
         const val NOW_PLAYING_STYLE_APPLE_MUSIC = "APPLE_MUSIC"
         const val NOW_PLAYING_STYLE_SOUNDCLOUD = "SOUNDCLOUD"
+
+        const val PLAYER_ANIMATION_DEFAULT = "DEFAULT"
+        const val PLAYER_ANIMATION_ENHANCED = "ENHANCED"
 
         const val LYRICS_STYLE_CLASSIC = "CLASSIC"
         const val LYRICS_STYLE_APPLE_MUSIC = "APPLE_MUSIC"

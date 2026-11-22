@@ -2115,6 +2115,14 @@ class SharedViewModel(
 
     fun getLyricsStyle() = dataStoreManager.lyricsStyle
 
+    fun getPlayerOpenAnimation() = dataStoreManager.playerOpenAnimation
+
+    fun setPlayerOpenAnimation(animation: String) {
+        viewModelScope.launch {
+            dataStoreManager.setPlayerOpenAnimation(animation)
+        }
+    }
+
     fun getLyricsOffsetMs() = dataStoreManager.lyricsOffsetMs
 
     fun setLyricsOffsetMs(offsetMs: Int) {
