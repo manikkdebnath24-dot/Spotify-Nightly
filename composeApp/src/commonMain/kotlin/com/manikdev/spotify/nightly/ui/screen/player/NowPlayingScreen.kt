@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -261,9 +262,12 @@ fun NowPlayingScreen(
             // press looked wasted. The second press then hid it. Both now go the same way.
             hideSheet()
         },
-        containerColor = Color.Black,
+        // Transparent on Enhanced: the sheet's slide would otherwise show as a dark panel rising
+        // before the cover grows - the "two animations" that never went away. With this and the
+        // scrim both clear, the sheet travels invisibly and the cover is the only thing that moves.
+        containerColor = if (enhancedOpen) Color.Transparent else Color.Black,
         dragHandle = {},
-        scrimColor = Color.Black.copy(alpha = .5f),
+        scrimColor = if (enhancedOpen) Color.Transparent else Color.Black.copy(alpha = .5f),
         sheetState = sheetState,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         shape = RectangleShape,
@@ -292,6 +296,7 @@ fun NowPlayingScreen(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .background(Color.Black)
                         .graphicsLayer {
                             // Start on the mini player itself: anchored on the bottom-left corner,
                             // scaled to a thumbnail and shifted down to the bar, then grown into
