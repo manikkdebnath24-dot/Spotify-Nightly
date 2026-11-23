@@ -256,7 +256,10 @@ fun NowPlayingScreen(
             Modifier
                 .fillMaxHeight(),
         onDismissRequest = {
-            onDismiss()
+            // hideSheet(), not onDismiss(). This is why the first back press did nothing: it told
+            // the app to leave but never hid the sheet, so the sheet stayed on screen and the
+            // press looked wasted. The second press then hid it. Both now go the same way.
+            hideSheet()
         },
         containerColor = Color.Black,
         dragHandle = {},
@@ -299,9 +302,12 @@ fun NowPlayingScreen(
                                 val s2 = 0.16f + 0.84f * grow
                                 scaleX = s2
                                 scaleY = s2
-                                // Opening grows from the bar's left corner; closing shrinks into
-                                // the mini player's own cover, which sits at the other end.
-                                transformOrigin = if (closing) TransformOrigin(1f, 1f) else TransformOrigin(0f, 1f)
+                                // The cover sits on the LEFT of the mini player, so both ends of
+                                // this animation anchor there - it grows out of the thumbnail and
+                                // shrinks back into the same spot. Closing used to anchor on the
+                                // right, which is the end with no artwork: it collapsed into empty
+                                // space.
+                                transformOrigin = TransformOrigin(0f, 1f)
                                 translationY = (1f - grow) * 220.dp.toPx()
                                 // Fully transparent at 0. This is the fix for the double
                                 // animation: the sheet's own slide used to bring the whole player
