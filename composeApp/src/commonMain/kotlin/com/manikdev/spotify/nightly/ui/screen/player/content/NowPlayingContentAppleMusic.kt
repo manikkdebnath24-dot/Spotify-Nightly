@@ -931,6 +931,8 @@ private fun AppleMusicArtworkPage(
     onCoverBitmap: (ImageBitmap) -> Unit,
     onClipStill: (ImageBitmap?, Dp) -> Unit,
 ) {
+    // Read once, here: the local itself is a composable read, the lambda it returns is not.
+    val openGrowProvider = LocalPlayerOpenGrow.current
     val pageTrack = state.artworkQueue.getOrNull(page)
     val isCurrentPage = page == state.currentOrderIndex
     val pageShowsFullscreen = isCurrentPage && (fullscreenCanvas || isVideoBackdrop)
@@ -985,7 +987,7 @@ private fun AppleMusicArtworkPage(
                         // of the page fades in behind it. Reading the grow through a lambda means
                         // this costs no recomposition - only the layer is re-laid out per frame.
                         .graphicsLayer {
-                            val grow = LocalPlayerOpenGrow.current()
+                            val grow = openGrowProvider()
                             if (grow < 1f) {
                                 val scale = 0.14f + 0.86f * grow
                                 scaleX = scale
