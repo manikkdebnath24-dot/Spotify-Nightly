@@ -298,10 +298,13 @@ fun NowPlayingScreen(
                             // place. At 1 nothing of this applies, so the settled player is
                             // pixel-identical to before.
                             if (enhancedOpen && openGrow.value < 1f) {
+                                // Fade only. Scaling the whole page was the "10% right" part: the
+                                // artwork, the title, the controls and the buttons all shrank
+                                // together, which reads as a zoom of a screenshot rather than a
+                                // cover growing into the player. The artwork carries the movement
+                                // on its own now; everything else arrives behind it.
                                 val grow = openGrow.value
-                                val s2 = 0.16f + 0.84f * grow
-                                scaleX = s2
-                                scaleY = s2
+                                val s2 = 1f
                                 // The cover sits on the LEFT of the mini player, so both ends of
                                 // this animation anchor there - it grows out of the thumbnail and
                                 // shrinks back into the same spot. Closing used to anchor on the

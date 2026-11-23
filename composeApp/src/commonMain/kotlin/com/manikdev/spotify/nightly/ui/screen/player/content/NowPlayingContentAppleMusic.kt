@@ -119,6 +119,9 @@ import com.manikdev.spotify.nightly.viewModel.UIEvent
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import kotlin.math.pow
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import com.manikdev.spotify.nightly.ui.screen.player.LocalPlayerOpenGrow
 
 /**
  * The Apple Music Now Playing style: a style-internal dock (Lyrics · [Output | Listen Together] ·
@@ -976,7 +979,22 @@ private fun AppleMusicArtworkPage(
                         .align(Alignment.TopCenter)
                         .padding(top = topInset)
                         .fillMaxWidth()
-                        .height(artworkHeight),
+                        .height(artworkHeight)
+                        // The cover carries the transition: it starts as a thumbnail on the mini
+                        // player's side of the screen and grows into its own frame, while the rest
+                        // of the page fades in behind it. Reading the grow through a lambda means
+                        // this costs no recomposition - only the layer is re-laid out per frame.
+                        .graphicsLayer {
+                            val grow = LocalPlayerOpenGrow.current()
+                            if (grow < 1f) {
+                                val scale = 0.14f + 0.86f * grow
+                                scaleX = scale
+                                scaleY = scale
+                                transformOrigin = TransformOrigin(0f, 0f)
+                                translationY = (1f - grow) * 520.dp.toPx()
+                                alpha = grow
+                            }
+                        },
             ) {
                 AsyncImage(
                     model = coverRequest,
